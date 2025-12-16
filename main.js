@@ -16,25 +16,66 @@ const context = canvas.getContext('webgpu');
 const format = navigator.gpu.getPreferredCanvasFormat();
 context.configure({ device, format });
 
+
 // Create vertex buffer
-const floor = new Float32Array([
-// positions         // colors         
-    -10, 0, -10,  1,     0.2, 0.8, 0.2, 1,  // 0 - spredaj levo (zelena trava)
-     10, 0, -10,  1,     0.2, 0.8, 0.2, 1,  // 1 - spredaj desno
-    -10, 0,  10,  1,     0.1, 0.6, 0.1, 1,  // 2 - zadaj levo (temnejša)
-     10, 0,  10,  1,     0.1, 0.6, 0.1, 1,  // 3 - zadaj desno
+const vertex = new Float32Array([
+// positions            //texcoords         
+    -30, 0, -30,  1,     0, 0,  // 0 - spredaj levo (zelena trava)
+     30, 0, -30,  1,     0, 1,  // 1 - spredaj desno
+    -30, 0,  30,  1,     1,0,  // 2 - zadaj levo (temnejša)
+     30, 0,  30,  1,     1, 1,  // 3 - zadaj desno
+]);
+
+const imageBitmap = await fetch('Red-carpet.jpg')
+.then(response => response.blob())
+.then(blob => createImageBitmap(blob));
+
+const texture = device.createTexture({
+    size: [imageBitmap.width, imageBitmap.height],
+    format: 'rgba8unorm',
+    usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.RENDER_ATTACHMENT |
+        GPUTextureUsage.COPY_DST,
+});
+
+device.queue.copyExternalImageToTexture(
+    { source: imageBitmap },
+    { texture },
+    [imageBitmap.width, imageBitmap.height]);
+
+const sampler = device.createSampler();
+
+const wall = new Float32Array([
+    // positions         // texcoords
+    -5, 0, -5, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+    5, 0, -5, 1,       1, 0,    // 1 - spodaj desno
+    -5, 5, -5, 1,       0, 1,   // 2 - zgoraj levo (svetlejša rdeča)
+    5, 5, -5, 1,       1, 1,   // 3 - zgoraj desno
 ]);
 
 const vertexBuffer = device.createBuffer({
-    size: floor.byteLength,
+    size: vertex.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
 });
 
-device.queue.writeBuffer(vertexBuffer, 0, floor);
+const wallBuffer = device.createBuffer({
+    size: wall.byteLength,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+});
+
+device.queue.writeBuffer(vertexBuffer, 0, vertex);
+device.queue.writeBuffer(wallBuffer, 0, wall);
+
 // Create index buffer
 const indices = new Uint32Array([
     0, 1, 2,    // Prvi trikotnik
     2, 1, 3,    // Drugi trikotnik
+]);
+
+const wallIndices = new Uint32Array([
+    0, 1, 2,    // Spodnji trikotnik
+    1, 3, 2,    // Zgornji trikotnik
 ]);
 
 const indexBuffer = device.createBuffer({
@@ -42,7 +83,13 @@ const indexBuffer = device.createBuffer({
     usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
 });
 
+const wallIndexBuffer = device.createBuffer({
+    size: wallIndices.byteLength,
+    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+});
+
 device.queue.writeBuffer(indexBuffer, 0, indices);
+device.queue.writeBuffer(wallIndexBuffer, 0, wallIndices);
 
 // Create the depth texture
 const depthTexture = device.createTexture({
@@ -57,8 +104,8 @@ const module = device.createShaderModule({ code });
 
 // Create the pipeline
 const vertexBufferLayout = {
-    arrayStride: 32,
-    attributes: [
+    arrayStride: 24,
+     attributes: [
         {
             shaderLocation: 0,
             offset: 0,
@@ -67,7 +114,7 @@ const vertexBufferLayout = {
         {
             shaderLocation: 1,
             offset: 16,
-            format: 'float32x4',
+            format: 'float32x2',
         },
     ],
 };
@@ -89,37 +136,45 @@ const pipeline = device.createRenderPipeline({
     layout: 'auto',
 });
 
-// Create matrix buffer
+//  for ground 
 const uniformBuffer = device.createBuffer({
     size: 16 * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
-// Create the bind group
+//for wall
+const wallUniformBuffer = device.createBuffer({
+    size: 16 * 4,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+});
+
+// Create the bind group for texture
 const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
     entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 1, resource: texture.createView() },
+        { binding: 2, resource: sampler },
+    ]
+});
+
+const wallBindGroup = device.createBindGroup({
+    layout: pipeline.getBindGroupLayout(0),
+    entries: [
+        { binding: 0, resource: { buffer: wallUniformBuffer } },
     ]
 });
 
 // Create the scene
 
-const model = new Node();
-model.addComponent(new Transform());
-/*
-model.addComponent({
-    update() {
-        const time = performance.now() / 1000;
-        const transform = model.getComponentOfType(Transform);
-        const rotation = transform.rotation;
+const ground = new Node();
+ground.addComponent(new Transform());  // Ground is at origin
 
-        quat.identity(rotation);
-        quat.rotateX(rotation, rotation, time * 0.6);
-        quat.rotateY(rotation, rotation, time * 0.7);
-    }
-});
-*/
+const wall1 = new Node();
+wall1.addComponent(new Transform({
+    translation: [0, 2.5, -5]  // Wall is centered at X=0, Y=2.5, Z=-5
+}));
+
 
 const camera = new Node();
 camera.addComponent(new Camera({
@@ -171,7 +226,12 @@ camera.addComponent({
         if (keysPressed['Shift']) { 
             transform.translation[1] += down[1];
         }
-
+        if (keysPressed['q'] || keysPressed['Q']) {
+            transform.rotation[1] += 0.05;
+        }
+        if (keysPressed['e'] || keysPressed['E']) {
+            transform.rotation[1] -= 0.05;
+        }
     }
 });
 
@@ -191,7 +251,8 @@ window.addEventListener('keyup', (e) => {
 
 
 const scene = new Node();
-scene.addChild(model);
+scene.addChild(ground);
+scene.addChild(wall1);
 scene.addChild(camera);
 
 // Update all components
@@ -205,7 +266,7 @@ function update() {
 
 function render() {
     // Get the required matrices
-    const modelMatrix = getGlobalModelMatrix(model);
+    const modelMatrix = getGlobalModelMatrix(ground);
     const viewMatrix = getGlobalViewMatrix(camera);
     const projectionMatrix = getProjectionMatrix(camera);
 
