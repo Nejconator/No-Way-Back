@@ -17,7 +17,7 @@ const format = navigator.gpu.getPreferredCanvasFormat();
 context.configure({ device, format });
 
 // Create vertex buffer
-const vertices = new Float32Array([
+const floor = new Float32Array([
 // positions         // colors         
     -10, 0, -10,  1,     0.2, 0.8, 0.2, 1,  // 0 - spredaj levo (zelena trava)
      10, 0, -10,  1,     0.2, 0.8, 0.2, 1,  // 1 - spredaj desno
@@ -26,12 +26,11 @@ const vertices = new Float32Array([
 ]);
 
 const vertexBuffer = device.createBuffer({
-    size: vertices.byteLength,
+    size: floor.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
 });
 
-device.queue.writeBuffer(vertexBuffer, 0, vertices);
-
+device.queue.writeBuffer(vertexBuffer, 0, floor);
 // Create index buffer
 const indices = new Uint32Array([
     0, 1, 2,    // Prvi trikotnik
@@ -135,6 +134,7 @@ camera.addComponent(new Transform({
 const cameraSpeed = 0.1;
 const keysPressed = {};
 // nagne kamero navzdol
+
 camera.addComponent({
     update() {
         const transform = camera.getComponentOfType(Transform);
@@ -144,6 +144,8 @@ camera.addComponent({
         quat.identity(rotation);
         quat.rotateX(rotation, rotation, -0.5);
 
+
+        // X+ (desno), X- (levo), Z+ (nazaj), Z- (naprej), Y+ (gor), Y- (dol)
         const forward = [0, 0, -cameraSpeed];
         const backward = [0, 0, cameraSpeed];
         const left = [-cameraSpeed, 0, 0];
