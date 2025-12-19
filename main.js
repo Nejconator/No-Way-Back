@@ -2,19 +2,31 @@ import { quat, mat4 } from './glm.js';
 import { Transform } from './Transform.js';
 import { Camera } from './Camera.js';
 import { Node } from './Node.js';
+import { Wall } from './wall.js';
 import {
     getGlobalModelMatrix,
     getGlobalViewMatrix,
     getProjectionMatrix,
 } from './SceneUtils.js';
 
+//import { GLTFLoader } from 'engine/loaders/GLTFLoader.js';
+
+
+
 // Initialize WebGPU
 const adapter = await navigator.gpu.requestAdapter();
 const device = await adapter.requestDevice();
 const canvas = document.querySelector('canvas');
+canvas.width = window.innerWidth * devicePixelRatio;
+canvas.height = window.innerHeight * devicePixelRatio;
 const context = canvas.getContext('webgpu');
 const format = navigator.gpu.getPreferredCanvasFormat();
-context.configure({ device, format });
+context.configure({
+    device,
+    format,
+    size: [canvas.width, canvas.height],
+});
+await Wall.loadTexture(device);
 
 
 // Create vertex buffer
@@ -46,26 +58,17 @@ device.queue.copyExternalImageToTexture(
 
 const sampler = device.createSampler();
 
-const wall = new Float32Array([
-    // positions         // texcoords
-    -5, 0, -5, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-    5, 0, -5, 1,       1, 0,    // 1 - spodaj desno
-    -5, 5, -5, 1,       0, 1,   // 2 - zgoraj levo (svetlejša rdeča)
-    5, 5, -5, 1,       1, 1,   // 3 - zgoraj desno
-]);
+
 
 const vertexBuffer = device.createBuffer({
     size: vertex.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
 });
 
-const wallBuffer = device.createBuffer({
-    size: wall.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-});
+
 
 device.queue.writeBuffer(vertexBuffer, 0, vertex);
-device.queue.writeBuffer(wallBuffer, 0, wall);
+
 
 // Create index buffer
 const indices = new Uint32Array([
@@ -73,23 +76,17 @@ const indices = new Uint32Array([
     2, 1, 3,    // Drugi trikotnik
 ]);
 
-const wallIndices = new Uint32Array([
-    0, 1, 2,    // Spodnji trikotnik
-    1, 3, 2,    // Zgornji trikotnik
-]);
+
 
 const indexBuffer = device.createBuffer({
     size: indices.byteLength,
     usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
 });
 
-const wallIndexBuffer = device.createBuffer({
-    size: wallIndices.byteLength,
-    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-});
+
 
 device.queue.writeBuffer(indexBuffer, 0, indices);
-device.queue.writeBuffer(wallIndexBuffer, 0, wallIndices);
+
 
 // Create the depth texture
 const depthTexture = device.createTexture({
@@ -142,11 +139,7 @@ const uniformBuffer = device.createBuffer({
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
-//for wall
-const wallUniformBuffer = device.createBuffer({
-    size: 16 * 4,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-});
+
 
 // Create the bind group for texture
 const bindGroup = device.createBindGroup({
@@ -158,30 +151,11 @@ const bindGroup = device.createBindGroup({
     ]
 });
 
-const wallBindGroup = device.createBindGroup({
-    layout: pipeline.getBindGroupLayout(0),
-    entries: [
-        { binding: 0, resource: { buffer: wallUniformBuffer } },
-        { binding: 1, resource: texture.createView() },
-        { binding: 2, resource: sampler },
-    ]
-});
 
 // Create the scene
 
 const ground = new Node();
 ground.addComponent(new Transform());  // Ground is at origin
-
-const wall1 = new Node();
-wall1.addComponent(new Transform({
-    translation: [0, 2.5, -5]  // Wall is centered at X=0, Y=2.5, Z=-5
-}));
-
-const wall2 = new Node();
-wall2.addComponent(new Transform({
-    translation: [0, 5.5, -5]  // Wall is centered at X=0, Y=2.5, Z=-5
-}));
-
 
 const camera = new Node();
 camera.addComponent(new Camera({
@@ -192,9 +166,17 @@ camera.addComponent(new Transform({
     translation: [0, 10, 15]
 }));
 
+const wall1 = new Wall(device, pipeline, camera, [0, 0, 0], 1, 30);
+const wall2 = new Wall(device, pipeline, camera, [-60, 0, 0], 1, 30); 
+const wall3 = new Wall(device, pipeline, camera, [0, 0, 0], 0, 30);
+
 
 const cameraSpeed = 0.1;
 const keysPressed = {};
+
+let MouseX = 0;
+let MouseY = 0;
+const sensitivity = 0.002;
 // nagne kamero navzdol
 
 camera.addComponent({
@@ -203,8 +185,13 @@ camera.addComponent({
         const rotation = transform.rotation;
         
         // Nagnjena kamera (~30 stopinj navzdol)
-        quat.identity(rotation);
+        //quat.identity(rotation);
         //quat.rotateX(rotation, rotation, -0.5);
+
+        quat.identity(rotation);
+
+        quat.rotateY(rotation, rotation, -MouseX*sensitivity);
+        quat.rotateX(rotation, rotation, -MouseY*sensitivity);
 
 
         // X+ (desno), X- (levo), Z+ (nazaj), Z- (naprej), Y+ (gor), Y- (dol)
@@ -214,6 +201,20 @@ camera.addComponent({
         const right = [cameraSpeed, 0, 0];
         const up = [0, cameraSpeed, 0];
         const down = [0, -cameraSpeed, 0];
+
+        window.addEventListener('mousemove', (e) => {
+            const moveX = e.clientX - MouseX;
+            const moveY = e.clientY - MouseY;
+            MouseX = e.clientX;
+            MouseY = e.clientY;
+
+            
+            
+            quat.rotateY(rotation, rotation, -moveX * sensitivity);
+            
+            quat.rotateX(rotation, rotation, -moveY * sensitivity);
+
+        });
 
         if (keysPressed['w'] || keysPressed['W']) {
             transform.translation[2] += forward[2];
@@ -239,8 +240,11 @@ camera.addComponent({
         if (keysPressed['e'] || keysPressed['E']) {
             transform.rotation[1] -= 0.7854;
         }
+        console.log("x:" + transform.translation[0] + " z:" + transform.translation[1] + " y:" + transform.translation[2]);
     }
 });
+
+
 
 window.addEventListener('keydown', (e) => {
     keysPressed[e.key] = true;
@@ -257,9 +261,11 @@ window.addEventListener('keyup', (e) => {
 });
 
 
-const scene = new Node();
+const scene = new Node(); // ----------------------------------------------------------
 scene.addChild(ground);
-scene.addChild(wall1);
+scene.addChild(wall1.returnNode());
+scene.addChild(wall2.returnNode());
+scene.addChild(wall3.returnNode());
 scene.addChild(camera);
 
 // Update all components
@@ -286,13 +292,9 @@ function render() {
     device.queue.writeBuffer(uniformBuffer, 0, matrix);
 
     
-        const wallModel = getGlobalModelMatrix(wall1);
-        const wallMatrix = mat4.create()
-            .multiply(projectionMatrix)
-            .multiply(viewMatrix)
-            .multiply(wallModel);
-
-        device.queue.writeBuffer(wallUniformBuffer, 0, wallMatrix);
+    wall1.updateRender();
+    wall2.updateRender();
+    wall3.updateRender();
     
 
     // Render
@@ -318,10 +320,9 @@ function render() {
     renderPass.drawIndexed(indices.length);
     
 
-    renderPass.setVertexBuffer(0, wallBuffer);
-    renderPass.setIndexBuffer(wallIndexBuffer, 'uint32');
-    renderPass.setBindGroup(0, wallBindGroup);
-    renderPass.drawIndexed(wallIndices.length);
+    wall1.draw(renderPass);
+    wall2.draw(renderPass);
+    wall3.draw(renderPass);
 
     renderPass.end();
     device.queue.submit([commandEncoder.finish()]);

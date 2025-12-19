@@ -1,3 +1,4 @@
+
 struct VertexInput {
     @location(0) position: vec4f,
     @location(1) texcoords: vec2f,
