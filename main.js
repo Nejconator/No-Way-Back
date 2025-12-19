@@ -162,6 +162,8 @@ const wallBindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
     entries: [
         { binding: 0, resource: { buffer: wallUniformBuffer } },
+        { binding: 1, resource: texture.createView() },
+        { binding: 2, resource: sampler },
     ]
 });
 
@@ -173,6 +175,11 @@ ground.addComponent(new Transform());  // Ground is at origin
 const wall1 = new Node();
 wall1.addComponent(new Transform({
     translation: [0, 2.5, -5]  // Wall is centered at X=0, Y=2.5, Z=-5
+}));
+
+const wall2 = new Node();
+wall2.addComponent(new Transform({
+    translation: [0, 5.5, -5]  // Wall is centered at X=0, Y=2.5, Z=-5
 }));
 
 
@@ -197,7 +204,7 @@ camera.addComponent({
         
         // Nagnjena kamera (~30 stopinj navzdol)
         quat.identity(rotation);
-        quat.rotateX(rotation, rotation, -0.5);
+        //quat.rotateX(rotation, rotation, -0.5);
 
 
         // X+ (desno), X- (levo), Z+ (nazaj), Z- (naprej), Y+ (gor), Y- (dol)
@@ -227,10 +234,10 @@ camera.addComponent({
             transform.translation[1] += down[1];
         }
         if (keysPressed['q'] || keysPressed['Q']) {
-            transform.rotation[1] += 0.05;
+            transform.rotation[1] += 0.7854;
         }
         if (keysPressed['e'] || keysPressed['E']) {
-            transform.rotation[1] -= 0.05;
+            transform.rotation[1] -= 0.7854;
         }
     }
 });
@@ -278,6 +285,16 @@ function render() {
 
     device.queue.writeBuffer(uniformBuffer, 0, matrix);
 
+    
+        const wallModel = getGlobalModelMatrix(wall1);
+        const wallMatrix = mat4.create()
+            .multiply(projectionMatrix)
+            .multiply(viewMatrix)
+            .multiply(wallModel);
+
+        device.queue.writeBuffer(wallUniformBuffer, 0, wallMatrix);
+    
+
     // Render
     const commandEncoder = device.createCommandEncoder();
     const renderPass = commandEncoder.beginRenderPass({
@@ -299,6 +316,13 @@ function render() {
     renderPass.setIndexBuffer(indexBuffer, 'uint32');
     renderPass.setBindGroup(0, bindGroup);
     renderPass.drawIndexed(indices.length);
+    
+
+    renderPass.setVertexBuffer(0, wallBuffer);
+    renderPass.setIndexBuffer(wallIndexBuffer, 'uint32');
+    renderPass.setBindGroup(0, wallBindGroup);
+    renderPass.drawIndexed(wallIndices.length);
+
     renderPass.end();
     device.queue.submit([commandEncoder.finish()]);
 }
