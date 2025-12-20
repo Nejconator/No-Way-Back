@@ -1,4 +1,4 @@
-import { quat, mat4 } from './glm.js';
+import { quat, mat4, vec3 } from './glm.js';
 import { Transform } from './Transform.js';
 import { Camera } from './Camera.js';
 import { Node } from './Node.js';
@@ -165,82 +165,191 @@ camera.addComponent(new Camera({
 camera.addComponent(new Transform({
     translation: [0, 10, 15]
 }));
+let cameraDeafultZ = camera.getComponentOfType(Transform).translation[1];
 
 const wall1 = new Wall(device, pipeline, camera, [0, 0, 0], 1, 30);
 const wall2 = new Wall(device, pipeline, camera, [-60, 0, 0], 1, 30); 
 const wall3 = new Wall(device, pipeline, camera, [0, 0, 0], 0, 30);
 
 
-const cameraSpeed = 0.1;
+
+
+// računaš točo eno mersko enoto pred tabo v smeri kamere
+function getForwardVector(camera) {
+    const world = getGlobalModelMatrix(camera);
+    
+    const forward = [-world[8], -world[9], -world[10]];
+    const backward = [world[8], world[9], world[10]];
+    
+    const len = Math.hypot(forward[0], forward[1], forward[2]);
+    forward[0] /= len; 
+    forward[1] /= len; 
+    forward[2] /= len;
+
+    const ForwardPosition = camera.getComponentOfType(Transform).translation;
+    const FrPosition = [ForwardPosition[0] + forward[0],
+                        ForwardPosition[1] + forward[1],
+                        ForwardPosition[2] + forward[2]];
+    
+    return FrPosition;
+}
+
+function AngleBetweenVectors(v1, v2) {
+    let dot = vec3.dot(v1, v2);
+    let mag = vec3.length(v1) * vec3.length(v2);
+    let angleBetween = Math.acos(dot / mag);
+
+
+    let cross = vec3.cross([], v1, v2);
+    if (cross[1] < 0) {
+        angleBetween = -angleBetween;
+    }
+    return angleBetween;
+}
+// nastavitve ----------------------------------------------------------
+const cameraSpeed = 0.2;
 const keysPressed = {};
+const sensitivity = 0.002;
 
 let MouseX = 0;
 let MouseY = 0;
-const sensitivity = 0.002;
-// nagne kamero navzdol
+
+
+canvas.addEventListener('click', () => {
+    canvas.requestPointerLock();
+});
+
+window.addEventListener('mousemove', (e) => {
+    MouseX += e.movementX;
+    MouseY += e.movementY;
+});
+
+
+
+let velocityW = 0;
+let velocityS = 0;
+let velocityA = 0;
+let velocityD = 0;
+let velocityUp = 0;
 
 camera.addComponent({
     update() {
         const transform = camera.getComponentOfType(Transform);
         const rotation = transform.rotation;
-        
-        // Nagnjena kamera (~30 stopinj navzdol)
-        //quat.identity(rotation);
-        //quat.rotateX(rotation, rotation, -0.5);
+       
 
         quat.identity(rotation);
-
         quat.rotateY(rotation, rotation, -MouseX*sensitivity);
-        quat.rotateX(rotation, rotation, -MouseY*sensitivity);
-
+        //quat.rotateX(rotation, rotation, -MouseY*sensitivity);
 
         // X+ (desno), X- (levo), Z+ (nazaj), Z- (naprej), Y+ (gor), Y- (dol)
-        const forward = [0, 0, -cameraSpeed];
-        const backward = [0, 0, cameraSpeed];
-        const left = [-cameraSpeed, 0, 0];
-        const right = [cameraSpeed, 0, 0];
-        const up = [0, cameraSpeed, 0];
-        const down = [0, -cameraSpeed, 0];
+        const vecCamera = camera.getComponentOfType(Transform).translation;
+        const Refvector = [vecCamera[0], vecCamera[1], vecCamera[2]-5];
+        
+        
+        const vectorCameraToRef = [Refvector[0] - transform.translation[0],
+                                   Refvector[1] - transform.translation[1],
+                                   Refvector[2] - transform.translation[2]];
+        
+        const CameraFrVector = getForwardVector(camera);
 
-        window.addEventListener('mousemove', (e) => {
-            const moveX = e.clientX - MouseX;
-            const moveY = e.clientY - MouseY;
-            MouseX = e.clientX;
-            MouseY = e.clientY;
+        const vectorCameraToForward = [CameraFrVector[0] - transform.translation[0],
+                                       CameraFrVector[1] - transform.translation[1],
+                                       CameraFrVector[2] - transform.translation[2]];
 
-            
-            
-            quat.rotateY(rotation, rotation, -moveX * sensitivity);
-            
-            quat.rotateX(rotation, rotation, -moveY * sensitivity);
+        
 
-        });
+        // računa kot za koliko je kamera rotirana glede na začetno smer
+        let angleBetween = AngleBetweenVectors(vectorCameraToRef, vectorCameraToForward);
+        console.log("Angle: " + angleBetween*(180/Math.PI));
 
+        //za forward in backward
+        let Xtravel = Math.sin(angleBetween)*(cameraSpeed);
+        let Ytravel = Math.cos(angleBetween)*(cameraSpeed); 
+
+        //za sideways
+        let Xsideways = Math.sin(angleBetween + Math.PI/2)*(cameraSpeed*0.6);
+        if (angleBetween*(180/Math.PI) < 0) {
+            Xsideways = -Xsideways;
+        }
+        let Ysideways = Math.cos(angleBetween + Math.PI/2)*(cameraSpeed*0.6);
+        if (angleBetween*(180/Math.PI) < 0) {
+            Ysideways = -Ysideways;
+        }
+
+        
+        let velocityFactor = 0.025
+        
+
+        // tranlation[0] -> x axis
+        // tranlation[1] -> y axis
+        // tranlation[2] -> z axis
         if (keysPressed['w'] || keysPressed['W']) {
-            transform.translation[2] += forward[2];
+           velocityW = 1;
+           velocityS = 0;
         }
+        transform.translation[0] -= Xtravel * velocityW;
+        transform.translation[2] -= Ytravel * velocityW;
+
         if (keysPressed['s'] || keysPressed['S']) {
-            transform.translation[2] += backward[2];
+            velocityS = 1;
+            velocityW = 0;
         }
+        transform.translation[0] += Xtravel * velocityS;
+        transform.translation[2] += Ytravel * velocityS;
+
         if (keysPressed['a'] || keysPressed['A']) {
-            transform.translation[0] += left[0];
+            velocityA = 1;
+            velocityD = 0;
         }
+            if(angleBetween*(180/Math.PI) < 0) {
+            transform.translation[0] += Xsideways * velocityA;
+            transform.translation[2] += Ysideways * velocityA;
+            } else {
+            transform.translation[0] -= Xsideways * velocityA;
+            transform.translation[2] -= Ysideways * velocityA;
+            }
         if (keysPressed['d'] || keysPressed['D']) {
-            transform.translation[0] += right[0];
+            velocityD = 1;
+            velocityA = 0;
         }
+            if(angleBetween*(180/Math.PI) < 0) {
+            transform.translation[0] -= Xsideways * velocityD;
+            transform.translation[2] -= Ysideways * velocityD;
+            } else {
+            transform.translation[0] += Xsideways * velocityD;
+            transform.translation[2] += Ysideways * velocityD;
+            }
+
         if (keysPressed[' ']) { 
-            transform.translation[1] += up[1];
+            if(camera.getComponentOfType(Transform).translation[1] <= cameraDeafultZ){
+            velocityUp = 0.5;
+            }
         }
+            transform.translation[1] += velocityUp;
+        
         if (keysPressed['Shift']) { 
-            transform.translation[1] += down[1];
+            //transform.translation[1] -= 1;
         }
-        if (keysPressed['q'] || keysPressed['Q']) {
-            transform.rotation[1] += 0.7854;
+
+        
+
+        velocityW -= velocityFactor;
+        if (velocityW < 0) velocityW = 0;
+        velocityS -= velocityFactor;
+        if (velocityS < 0) velocityS = 0;
+        velocityA -= velocityFactor;
+        if (velocityA < 0) velocityA = 0;
+        velocityD -= velocityFactor;
+        if (velocityD < 0) velocityD = 0;
+
+        velocityUp -= velocityFactor;
+        if (velocityUp < 0 && camera.getComponentOfType(Transform).translation[1] <= cameraDeafultZ) {
+            velocityUp = 0;
+            camera.getComponentOfType(Transform).translation[1] = cameraDeafultZ;
         }
-        if (keysPressed['e'] || keysPressed['E']) {
-            transform.rotation[1] -= 0.7854;
-        }
-        console.log("x:" + transform.translation[0] + " z:" + transform.translation[1] + " y:" + transform.translation[2]);
+
+       // console.log("x:" + transform.translation[0] + " z:" + transform.translation[1] + " y:" + transform.translation[2]);
     }
 });
 
