@@ -80,50 +80,50 @@ export class Wall {
             translation: position
         }));
 
-        const repeatU = this.length / 10 ;
-        const repeatV = 15 / 15 ;
+        const repeatU = this.length / 2.5 ;
+        const repeatV = 10 / 5 ;
 
         
         const wall1 = new Float32Array([
             // positions         // texcoords
-            -this.length, 1, -this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            this.length, 1, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
-            -this.length, 15, -this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
-            this.length, 15, -this.length, 1,       repeatU, repeatV,   // 3 - zgoraj desno
+            -this.length, 0.5, 0, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            this.length, 0.5, 0, 1,       repeatU, 0,    // 1 - spodaj desno
+            -this.length, 10, 0, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            this.length, 10, 0, 1,       repeatU, repeatV,   // 3 - zgoraj desno
         ]);
 
         const wall2 = new Float32Array([
             // positions         // texcoords
-            this.length, 1, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            this.length, 1, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
-            this.length, 15, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
-            this.length, 15, -this.length, 1,       repeatU, repeatV,   // 3 - zgoraj desno
+            0, 0.5, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            0, 0.5, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
+            0, 10, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            0, 10, -this.length, 1,       repeatU, repeatV,   // 3 - zgoraj desno
         ]);
 
         const wall = this.rotation === 1 ? wall2 : wall1;
 
         const plank1 = new Float32Array([
             // positions         // texcoords
-            -this.length, 0, -this.length-0.1, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            this.length, 0, -this.length-0.1, 1,       repeatU, 0,    // 1 - spodaj desno
-            -this.length, 0, -this.length+0.1, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            this.length, 0, -this.length+0.1, 1,       repeatU, 0,    // 1 - spodaj desno
-            -this.length, 1, -this.length-0.1, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
-            this.length, 1, -this.length-0.1, 1,       repeatU, repeatV,   // 3 - zgoraj desno
-            -this.length, 1, -this.length+0.1, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
-            this.length, 1, -this.length+0.1, 1,       repeatU, repeatV,
+            -this.length, 0, -0.1, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            this.length, 0, -0.1, 1,       repeatU, 0,    // 1 - spodaj desno
+            -this.length, 0, +0.1, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            this.length, 0, +0.1, 1,       repeatU, 0,    // 1 - spodaj desno
+            -this.length, 0.5, -0.1, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            this.length, 0.5, -0.1, 1,       repeatU, repeatV,   // 3 - zgoraj desno
+            -this.length, 0.5, +0.1, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            this.length, 0.5, +0.1, 1,       repeatU, repeatV,
         ]);
 
         const plank2 = new Float32Array([
             // positions         // texcoords
-            this.length-0.1, 0, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            this.length-0.1, 0, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
-            this.length+0.1, 0, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            this.length+0.1, 0, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
-            this.length-0.1, 1, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
-            this.length-0.1, 1, -this.length, 1,       repeatU, repeatV,
-            this.length+0.1, 1, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
-            this.length+0.1, 1, -this.length, 1,       repeatU, repeatV,
+            -0.1, 0, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            -0.1, 0, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
+            +0.1, 0, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            +0.1, 0, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
+            -0.1, 0.5, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            -0.1, 0.5, -this.length, 1,       repeatU, repeatV,
+            +0.1, 0.5, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            +0.1, 0.5, -this.length, 1,       repeatU, repeatV,
         ]);
 
         const plank = this.rotation === 1 ? plank2 : plank1;

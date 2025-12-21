@@ -4,6 +4,7 @@ import { Camera } from './Camera.js';
 import { Node } from './Node.js';
 import { Wall } from './wall.js';
 import { Collisions } from './Collisions.js';
+import { floorSize, walls } from './Positions.js';
 import {
     getGlobalModelMatrix,
     getGlobalViewMatrix,
@@ -29,8 +30,8 @@ await Wall.loadTexture(device);
 
 
 
-const repeatU = 30 / 5 ;
-const repeatV = 30 / 5 ;
+const repeatU = 30 / 2.5 ;
+const repeatV = 30 / 2.5 ;
 
 // Create vertex buffer
 const vertex = new Float32Array([
@@ -165,21 +166,28 @@ camera.addComponent(new Camera({
     aspect: 1,
 }));
 camera.addComponent(new Transform({
-    translation: [0, 10, 15]
+    translation: [0, 6, 0] //10
 }));
 
 let cameraDeafultZ = camera.getComponentOfType(Transform).translation[1];
+/*
+const wall1 = new Wall(device, pipeline, camera, [30, 0, 0], 1, 30);
+const wall2 = new Wall(device, pipeline, camera, [-30, 0, 0], 1, 30); 
+const wall3 = new Wall(device, pipeline, camera, [0, 0, -30], 0, 30);
+const wall4 = new Wall(device, pipeline, camera, [-15, 0, 0], 1, 15);
+*/
 
-const wall1 = new Wall(device, pipeline, camera, [0, 0, 0], 1, 30);
-const wall2 = new Wall(device, pipeline, camera, [-60, 0, 0], 1, 30); 
-const wall3 = new Wall(device, pipeline, camera, [0, 0, 0], 0, 30);
-const wall4 = new Wall(device, pipeline, camera, [-30, 0, 0], 1, 15);
-
-const walls = new Wall[52]; 
-for (let i = 0; i < 52; i++) {
-    walls[i] = new Wall(device, pipeline, camera, [0, 0, 0], 0, 30);
+const wallsArray = []; 
+let i = 0;
+for (const w of walls) {
+    if(w.rotation === 0){
+    wallsArray[i] = new Wall(device, pipeline, camera, w.pos, w.rotation, w.size[0]/2);
+    }
+    if(w.rotation === 1){
+        wallsArray[i] = new Wall(device, pipeline, camera, w.pos, w.rotation, w.size[2]/2);
+    }
+    i++;
 }
-
 
 
 
@@ -216,7 +224,7 @@ function AngleBetweenVectors(v1, v2) {
     return angleBetween;
 }
 // nastavitve za premikanje ----------------------------------------------------------
-const cameraSpeed = 0.2;
+const cameraSpeed = 0.1;
 const keysPressed = {};
 const sensitivity = 0.002;
 
@@ -332,7 +340,7 @@ camera.addComponent({
 
         if (keysPressed[' ']) { 
             if(camera.getComponentOfType(Transform).translation[1] <= cameraDeafultZ){
-            velocityUp = 0.4;
+            velocityUp = 0.3;
             }
         }
             transform.translation[1] += velocityUp;
@@ -352,7 +360,7 @@ camera.addComponent({
         velocityD -= velocityFactor;
         if (velocityD < 0) velocityD = 0;
 
-        velocityUp -= velocityFactor*0.9;
+        velocityUp -= velocityFactor*0.7;
         if (velocityUp < 0 && camera.getComponentOfType(Transform).translation[1] <= cameraDeafultZ) {
             velocityUp = 0;
             camera.getComponentOfType(Transform).translation[1] = cameraDeafultZ;
@@ -377,10 +385,17 @@ window.addEventListener('keyup', (e) => {
 
 const scene = new Node(); // ----------------------------------------------------------
 scene.addChild(ground);
+/*
 scene.addChild(wall1.returnNode());
 scene.addChild(wall2.returnNode());
 scene.addChild(wall3.returnNode());
 scene.addChild(wall4.returnNode());
+*/
+
+for (let j=0; j<wallsArray.length; j++) {
+    scene.addChild(wallsArray[j].returnNode());
+}
+
 scene.addChild(camera);
 
 // Update all components
@@ -406,12 +421,17 @@ function render() {
 
     device.queue.writeBuffer(uniformBuffer, 0, matrix);
 
-    
+    /*
     wall1.updateRender();
     wall2.updateRender();
     wall3.updateRender();
     wall4.updateRender();
-    
+    */
+ 
+    for (let j=0; j<wallsArray.length; j++) {
+        wallsArray[j].updateRender();
+    }
+
 
     // Render
     const commandEncoder = device.createCommandEncoder();
@@ -435,11 +455,16 @@ function render() {
     renderPass.setBindGroup(0, bindGroup);
     renderPass.drawIndexed(indices.length);
     
-
+    /*
     wall1.draw(renderPass);
     wall2.draw(renderPass);
     wall3.draw(renderPass);
     wall4.draw(renderPass);
+    */
+
+    for (let j=0; j<wallsArray.length; j++) {
+        wallsArray[j].draw(renderPass);
+    }
 
     renderPass.end();
     device.queue.submit([commandEncoder.finish()]);
@@ -447,39 +472,47 @@ function render() {
 
 const wallColliders = [
     { 
-        // wall1 (rotation 1) = Side wall on the right
+        // wall1 (rotation 1 in main.js) = Side wall on the right
         node: { translation: [30, 7.5, 0] }, 
         size: [1, 25, 60], 
         meta: { type: 'wall' } 
     },
     { 
-        // wall2 (rotation 1) = Side wall on the left
+        // wall2 (rotation 1 in main.js) = Side wall on the left
         // position [-60, 0, 0] + vertex offset [30, 0, 0] = -30
         node: { translation: [-30, 7.5, 0] }, 
         size: [1, 25, 60], 
         meta: { type: 'wall' } 
     },
     { 
-        // wall3 (rotation 0) = Back wall
+        // wall3 (rotation 0 in main.js) = Back wall
         node: { translation: [0, 7.5, -30] }, 
         size: [60, 25, 1], 
         meta: { type: 'wall' } 
     },
-    {
-        // wall4 (rotation 1) = Short side wall on the left
-        node: { translation: [-15, 7.5, 0] }, 
-        size: [1, 25, 30], 
+    { 
+        // wall4 (rotation 0 in main.js) = Back wall
+        node: { translation: [0, 7.5, 30] }, 
+        size: [60, 25, 1], 
         meta: { type: 'wall' } 
-    },
-];
+    }
 
+];  
 
-const orbColliders = []; // fill this when you create orbs
+for (const w of walls) {
+    wallColliders.push({
+        node: { translation: w.pos },
+        size: w.size,
+        meta: { type: "wall" }
+    });
+}
+
+const orbColliders = []; 
 
 
 const collisions = new Collisions({
     playerNode: camera,
-    playerSize: [1, 1.8, 1],   // tweak to match camera/player height
+    playerSize: [1, 6, 1],   
     wallColliders,
     orbColliders
 });
