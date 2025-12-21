@@ -3,13 +3,12 @@ import { Transform } from './Transform.js';
 import { Camera } from './Camera.js';
 import { Node } from './Node.js';
 import { Wall } from './wall.js';
+import { Collisions } from './Collisions.js';
 import {
     getGlobalModelMatrix,
     getGlobalViewMatrix,
     getProjectionMatrix,
 } from './SceneUtils.js';
-
-//import { GLTFLoader } from 'engine/loaders/GLTFLoader.js';
 
 
 
@@ -29,13 +28,17 @@ context.configure({
 await Wall.loadTexture(device);
 
 
+
+const repeatU = 30 / 5 ;
+const repeatV = 30 / 5 ;
+
 // Create vertex buffer
 const vertex = new Float32Array([
 // positions            //texcoords         
     -30, 0, -30,  1,     0, 0,  // 0 - spredaj levo (zelena trava)
-     30, 0, -30,  1,     0, 1,  // 1 - spredaj desno
-    -30, 0,  30,  1,     1,0,  // 2 - zadaj levo (temnejša)
-     30, 0,  30,  1,     1, 1,  // 3 - zadaj desno
+     30, 0, -30,  1,     repeatU, 0,  // 1 - spredaj desno
+    -30, 0,  30,  1,     0, repeatV,  // 2 - zadaj levo (temnejša)
+     30, 0,  30,  1,     repeatU, repeatV,  // 3 - zadaj desno
 ]);
 
 const imageBitmap = await fetch('Red-carpet.jpg')
@@ -56,19 +59,19 @@ device.queue.copyExternalImageToTexture(
     { texture },
     [imageBitmap.width, imageBitmap.height]);
 
-const sampler = device.createSampler();
-
-
+    const sampler = device.createSampler({
+        addressModeU: 'repeat',
+        addressModeV: 'repeat',
+        magFilter: "linear",
+        minFilter: "linear",
+    });
 
 const vertexBuffer = device.createBuffer({
     size: vertex.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
 });
 
-
-
 device.queue.writeBuffer(vertexBuffer, 0, vertex);
-
 
 // Create index buffer
 const indices = new Uint32Array([
@@ -76,14 +79,10 @@ const indices = new Uint32Array([
     2, 1, 3,    // Drugi trikotnik
 ]);
 
-
-
 const indexBuffer = device.createBuffer({
     size: indices.byteLength,
     usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
 });
-
-
 
 device.queue.writeBuffer(indexBuffer, 0, indices);
 
@@ -134,11 +133,11 @@ const pipeline = device.createRenderPipeline({
 });
 
 //  for ground 
+
 const uniformBuffer = device.createBuffer({
     size: 16 * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
-
 
 
 // Create the bind group for texture
@@ -152,7 +151,10 @@ const bindGroup = device.createBindGroup({
 });
 
 
+
+
 // Create the scene
+
 
 const ground = new Node();
 ground.addComponent(new Transform());  // Ground is at origin
@@ -165,11 +167,18 @@ camera.addComponent(new Camera({
 camera.addComponent(new Transform({
     translation: [0, 10, 15]
 }));
+
 let cameraDeafultZ = camera.getComponentOfType(Transform).translation[1];
 
 const wall1 = new Wall(device, pipeline, camera, [0, 0, 0], 1, 30);
 const wall2 = new Wall(device, pipeline, camera, [-60, 0, 0], 1, 30); 
 const wall3 = new Wall(device, pipeline, camera, [0, 0, 0], 0, 30);
+const wall4 = new Wall(device, pipeline, camera, [-30, 0, 0], 1, 15);
+
+const walls = new Wall[52]; 
+for (let i = 0; i < 52; i++) {
+    walls[i] = new Wall(device, pipeline, camera, [0, 0, 0], 0, 30);
+}
 
 
 
@@ -206,7 +215,7 @@ function AngleBetweenVectors(v1, v2) {
     }
     return angleBetween;
 }
-// nastavitve ----------------------------------------------------------
+// nastavitve za premikanje ----------------------------------------------------------
 const cameraSpeed = 0.2;
 const keysPressed = {};
 const sensitivity = 0.002;
@@ -299,7 +308,7 @@ camera.addComponent({
         transform.translation[2] += Ytravel * velocityS;
 
         if (keysPressed['a'] || keysPressed['A']) {
-            velocityA = 1;
+            velocityA = 0.7;
             velocityD = 0;
         }
             if(angleBetween*(180/Math.PI) < 0) {
@@ -310,7 +319,7 @@ camera.addComponent({
             transform.translation[2] -= Ysideways * velocityA;
             }
         if (keysPressed['d'] || keysPressed['D']) {
-            velocityD = 1;
+            velocityD = 0.7;
             velocityA = 0;
         }
             if(angleBetween*(180/Math.PI) < 0) {
@@ -323,7 +332,7 @@ camera.addComponent({
 
         if (keysPressed[' ']) { 
             if(camera.getComponentOfType(Transform).translation[1] <= cameraDeafultZ){
-            velocityUp = 0.5;
+            velocityUp = 0.4;
             }
         }
             transform.translation[1] += velocityUp;
@@ -343,13 +352,13 @@ camera.addComponent({
         velocityD -= velocityFactor;
         if (velocityD < 0) velocityD = 0;
 
-        velocityUp -= velocityFactor;
+        velocityUp -= velocityFactor*0.9;
         if (velocityUp < 0 && camera.getComponentOfType(Transform).translation[1] <= cameraDeafultZ) {
             velocityUp = 0;
             camera.getComponentOfType(Transform).translation[1] = cameraDeafultZ;
-        }
+        } 
 
-       // console.log("x:" + transform.translation[0] + " z:" + transform.translation[1] + " y:" + transform.translation[2]);
+        console.log("x:" + transform.translation[0] + " z:" + transform.translation[1] + " y:" + transform.translation[2]);
     }
 });
 
@@ -357,16 +366,12 @@ camera.addComponent({
 
 window.addEventListener('keydown', (e) => {
     keysPressed[e.key] = true;
-    // Handle special keys
     if (e.key === ' ') keysPressed[' '] = true;
-    if (e.key === 'Shift') keysPressed['Shift'] = true;
 });
 
 window.addEventListener('keyup', (e) => {
     keysPressed[e.key] = false;
-    // Handle special keys
     if (e.key === ' ') keysPressed[' '] = false;
-    if (e.key === 'Shift') keysPressed['Shift'] = false;
 });
 
 
@@ -375,6 +380,7 @@ scene.addChild(ground);
 scene.addChild(wall1.returnNode());
 scene.addChild(wall2.returnNode());
 scene.addChild(wall3.returnNode());
+scene.addChild(wall4.returnNode());
 scene.addChild(camera);
 
 // Update all components
@@ -404,6 +410,7 @@ function render() {
     wall1.updateRender();
     wall2.updateRender();
     wall3.updateRender();
+    wall4.updateRender();
     
 
     // Render
@@ -432,13 +439,62 @@ function render() {
     wall1.draw(renderPass);
     wall2.draw(renderPass);
     wall3.draw(renderPass);
+    wall4.draw(renderPass);
 
     renderPass.end();
     device.queue.submit([commandEncoder.finish()]);
 }
 
+const wallColliders = [
+    { 
+        // wall1 (rotation 1) = Side wall on the right
+        node: { translation: [30, 7.5, 0] }, 
+        size: [1, 25, 60], 
+        meta: { type: 'wall' } 
+    },
+    { 
+        // wall2 (rotation 1) = Side wall on the left
+        // position [-60, 0, 0] + vertex offset [30, 0, 0] = -30
+        node: { translation: [-30, 7.5, 0] }, 
+        size: [1, 25, 60], 
+        meta: { type: 'wall' } 
+    },
+    { 
+        // wall3 (rotation 0) = Back wall
+        node: { translation: [0, 7.5, -30] }, 
+        size: [60, 25, 1], 
+        meta: { type: 'wall' } 
+    },
+    {
+        // wall4 (rotation 1) = Short side wall on the left
+        node: { translation: [-15, 7.5, 0] }, 
+        size: [1, 25, 30], 
+        meta: { type: 'wall' } 
+    },
+];
+
+
+const orbColliders = []; // fill this when you create orbs
+
+
+const collisions = new Collisions({
+    playerNode: camera,
+    playerSize: [1, 1.8, 1],   // tweak to match camera/player height
+    wallColliders,
+    orbColliders
+});
+
+collisions.onOrbCollect = (orbMeta) => {
+    console.log('Orb collected!', orbMeta);
+    // Example actions:
+    // - remove orb from scene
+    // - increment score
+    // - mark orb as collected in orbColliders array
+};
+
 function frame() {
     update();
+    collisions.update();
     render();
     requestAnimationFrame(frame);
 }

@@ -12,11 +12,16 @@ import {
 export class Wall {
 
     static imageBitmap = null;
+    static imageBitmap2 = null;
 
     static async loadTexture(device) {
         if (Wall.imageBitmap) return;
 
         this.imageBitmap = await fetch('wall_texture.jpg')
+        .then(r => r.blob())
+        .then(b => createImageBitmap(b));
+
+        this.imageBitmap2 = await fetch('wood.jpg')
         .then(r => r.blob())
         .then(b => createImageBitmap(b));
 
@@ -40,50 +45,114 @@ export class Wall {
                 GPUTextureUsage.COPY_DST,
         });
 
+        this.texture2 = device.createTexture({
+            size: [Wall.imageBitmap2.width, Wall.imageBitmap2.height],
+            format: 'rgba8unorm',
+            usage:
+                GPUTextureUsage.TEXTURE_BINDING |
+                GPUTextureUsage.RENDER_ATTACHMENT |
+                GPUTextureUsage.COPY_DST,
+        });
+
         device.queue.copyExternalImageToTexture(
             { source: Wall.imageBitmap },
             { texture: this.texture },
             [Wall.imageBitmap.width, Wall.imageBitmap.height]);
 
-        const sampler = device.createSampler();
 
+        const sampler = device.createSampler({
+        addressModeU: 'repeat',
+        addressModeV: 'repeat',
+        magFilter: "linear",
+        minFilter: "linear",
+        });
+
+
+        device.queue.copyExternalImageToTexture(
+            { source: Wall.imageBitmap2 },
+            { texture: this.texture2 },
+            [Wall.imageBitmap2.width, Wall.imageBitmap2.height]);
+
+        
          
         this.node = new Node();
         this.node.addComponent(new Transform({
             translation: position
         }));
-        
+
+        const repeatU = this.length / 10 ;
+        const repeatV = 15 / 15 ;
 
         
         const wall1 = new Float32Array([
             // positions         // texcoords
-            -this.length, 0, -this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            this.length, 0, -this.length, 1,       1, 0,    // 1 - spodaj desno
-            -this.length, 15, -this.length, 1,       0, 1,   // 2 - zgoraj levo (svetlejša rdeča)
-            this.length, 15, -this.length, 1,       1, 1,   // 3 - zgoraj desno
+            -this.length, 1, -this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            this.length, 1, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
+            -this.length, 15, -this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            this.length, 15, -this.length, 1,       repeatU, repeatV,   // 3 - zgoraj desno
         ]);
 
         const wall2 = new Float32Array([
             // positions         // texcoords
-            this.length, 0, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            this.length, 0, -this.length, 1,       1, 0,    // 1 - spodaj desno
-            this.length, 15, this.length, 1,       0, 1,   // 2 - zgoraj levo (svetlejša rdeča)
-            this.length, 15, -this.length, 1,       1, 1,   // 3 - zgoraj desno
+            this.length, 1, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            this.length, 1, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
+            this.length, 15, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            this.length, 15, -this.length, 1,       repeatU, repeatV,   // 3 - zgoraj desno
         ]);
 
         const wall = this.rotation === 1 ? wall2 : wall1;
 
+        const plank1 = new Float32Array([
+            // positions         // texcoords
+            -this.length, 0, -this.length-0.1, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            this.length, 0, -this.length-0.1, 1,       repeatU, 0,    // 1 - spodaj desno
+            -this.length, 0, -this.length+0.1, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            this.length, 0, -this.length+0.1, 1,       repeatU, 0,    // 1 - spodaj desno
+            -this.length, 1, -this.length-0.1, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            this.length, 1, -this.length-0.1, 1,       repeatU, repeatV,   // 3 - zgoraj desno
+            -this.length, 1, -this.length+0.1, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            this.length, 1, -this.length+0.1, 1,       repeatU, repeatV,
+        ]);
+
+        const plank2 = new Float32Array([
+            // positions         // texcoords
+            this.length-0.1, 0, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            this.length-0.1, 0, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
+            this.length+0.1, 0, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            this.length+0.1, 0, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
+            this.length-0.1, 1, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            this.length-0.1, 1, -this.length, 1,       repeatU, repeatV,
+            this.length+0.1, 1, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            this.length+0.1, 1, -this.length, 1,       repeatU, repeatV,
+        ]);
+
+        const plank = this.rotation === 1 ? plank2 : plank1;
 
         this.wallBuffer = device.createBuffer({
             size: wall.byteLength,
             usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
         });
 
+        this.plankBuffer = device.createBuffer({
+            size: plank.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
+
         device.queue.writeBuffer(this.wallBuffer, 0, wall);
+        device.queue.writeBuffer(this.plankBuffer, 0, plank);
 
         const wallIndices = new Uint32Array([
             0, 1, 2,    // Spodnji trikotnik
             1, 3, 2,    // Zgornji trikotnik
+        ]);
+
+        const plankIndices = new Uint32Array([
+            0, 1, 2,    2, 1, 3,
+            4, 0, 6,    6, 0, 2,
+            5, 4, 7,    7, 4, 6,
+            1, 5, 3,    3, 5, 7,
+            6, 2, 7,    7, 2, 3,
+            1, 0, 5,    5, 0, 4,
         ]);
 
         this.wallIndexBuffer = device.createBuffer({
@@ -91,12 +160,24 @@ export class Wall {
             usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
         });
 
+        this.plankIndexBuffer = device.createBuffer({
+            size: plankIndices.byteLength,
+            usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+        });
+
         device.queue.writeBuffer(this.wallIndexBuffer, 0, wallIndices);
+        device.queue.writeBuffer(this.plankIndexBuffer, 0, plankIndices);
 
         this.indexCount = wallIndices.length;
+        this.plankIndexCount = plankIndices.length;
 
 
         this.wallUniformBuffer = device.createBuffer({
+            size: 16 * 4,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+
+        this.plankUniformBuffer = device.createBuffer({
             size: 16 * 4,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
@@ -109,6 +190,16 @@ export class Wall {
                 { binding: 2, resource: sampler },
             ]
         });
+
+        this.plankBindGroup = device.createBindGroup({
+            layout: pipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: this.plankUniformBuffer } },
+                { binding: 1, resource: this.texture2.createView() },
+                { binding: 2, resource: sampler },
+            ]
+        });
+
     }
 
     returnNode() {
@@ -126,6 +217,8 @@ export class Wall {
             .multiply(model);
 
         this.device.queue.writeBuffer(this.wallUniformBuffer, 0, matrix);
+        this.device.queue.writeBuffer(this.plankUniformBuffer, 0, matrix);
+
     }
 
     draw(renderPass) {
@@ -136,6 +229,11 @@ export class Wall {
         renderPass.setIndexBuffer(this.wallIndexBuffer, 'uint32');
         renderPass.setBindGroup(0, this.wallBindGroup);
         renderPass.drawIndexed(this.indexCount);
+
+        renderPass.setVertexBuffer(0, this.plankBuffer);
+        renderPass.setIndexBuffer(this.plankIndexBuffer, 'uint32');
+        renderPass.setBindGroup(0, this.plankBindGroup);
+        renderPass.drawIndexed(this.plankIndexCount);
     }
 
         
