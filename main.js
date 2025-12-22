@@ -170,6 +170,7 @@ camera.addComponent(new Transform({
 }));
 
 let cameraDeafultZ = camera.getComponentOfType(Transform).translation[1];
+
 /*
 const wall1 = new Wall(device, pipeline, camera, [30, 0, 0], 1, 30);
 const wall2 = new Wall(device, pipeline, camera, [-30, 0, 0], 1, 30); 
@@ -427,11 +428,11 @@ function render() {
     wall3.updateRender();
     wall4.updateRender();
     */
- 
+    
     for (let j=0; j<wallsArray.length; j++) {
         wallsArray[j].updateRender();
     }
-
+    
 
     // Render
     const commandEncoder = device.createCommandEncoder();
@@ -462,10 +463,11 @@ function render() {
     wall4.draw(renderPass);
     */
 
+    
     for (let j=0; j<wallsArray.length; j++) {
         wallsArray[j].draw(renderPass);
     }
-
+    
     renderPass.end();
     device.queue.submit([commandEncoder.finish()]);
 }
@@ -506,7 +508,7 @@ for (const w of walls) {
         meta: { type: "wall" }
     });
 }
-
+ 
 const orbColliders = []; 
 
 

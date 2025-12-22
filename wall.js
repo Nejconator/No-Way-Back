@@ -128,6 +128,57 @@ export class Wall {
 
         const plank = this.rotation === 1 ? plank2 : plank1;
 
+        const edgeplank1 = new Float32Array([
+            this.length-0.5, 0, -0.1, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            this.length, 0, -0.1, 1,       repeatU, 0,    // 1 - spodaj desno
+            this.length-0.5, 0, +0.1, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            this.length, 0, +0.1, 1,       repeatU, 0,    // 1 - spodaj desno
+            this.length-0.5, 10, -0.1, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            this.length, 10, -0.1, 1,       repeatU, repeatV,   // 3 - zgoraj desno
+            this.length-0.5, 10, +0.1, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            this.length, 10, +0.1, 1,       repeatU, repeatV,
+
+        ]);
+
+        const edgeplank2 = new Float32Array([
+            // positions         // texcoords
+            -0.1, 0, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            -0.1, 0, this.length-0.5, 1,       repeatU, 0,    // 1 - spodaj desno
+            +0.1, 0, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            +0.1, 0, this.length-0.5, 1,       repeatU, 0,    // 1 - spodaj desno
+            -0.1, 10, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            -0.1, 10, this.length-0.5, 1,       repeatU, repeatV,
+            +0.1, 10, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            +0.1, 10, this.length-0.5, 1,       repeatU, repeatV,
+        ]);
+
+        const edgePlank = this.rotation === 1 ? edgeplank2 : edgeplank1;
+
+        const secEdgeplank1 = new Float32Array([
+            -this.length+0.5, 0, -0.1, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            -this.length, 0, -0.1, 1,       repeatU, 0,    // 1 - spodaj desno
+            -this.length+0.5, 0, +0.1, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            -this.length, 0, +0.1, 1,       repeatU, 0,    // 1 - spodaj desno
+            -this.length+0.5, 10, -0.1, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            -this.length, 10, -0.1, 1,       repeatU, repeatV,   // 3 - zgoraj desno
+            -this.length+0.5, 10, +0.1, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            -this.length, 10, +0.1, 1,       repeatU, repeatV,
+        ]);
+
+        const secEdgeplank2 = new Float32Array([
+            // positions         // texcoords
+            -0.1, 0, -this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            -0.1, 0, -this.length+0.5, 1,       repeatU, 0,    // 1 - spodaj desno
+            +0.1, 0, -this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
+            +0.1, 0, -this.length+0.5, 1,       repeatU, 0,    // 1 - spodaj desno
+            -0.1, 10, -this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            -0.1, 10, -this.length+0.5, 1,       repeatU, repeatV,
+            +0.1, 10, -this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            +0.1, 10, -this.length+0.5, 1,       repeatU, repeatV,
+        ]);
+
+        const secEdgePlank = this.rotation === 1 ? secEdgeplank2 : secEdgeplank1;
+
         this.wallBuffer = device.createBuffer({
             size: wall.byteLength,
             usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
@@ -138,8 +189,19 @@ export class Wall {
             usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
         });
 
+        this.edgeplankBuffer = device.createBuffer({
+            size: edgePlank.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
+        this.secEdgeplankBuffer = device.createBuffer({
+            size: secEdgePlank.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
+
         device.queue.writeBuffer(this.wallBuffer, 0, wall);
         device.queue.writeBuffer(this.plankBuffer, 0, plank);
+        device.queue.writeBuffer(this.edgeplankBuffer, 0, edgePlank);
+        device.queue.writeBuffer(this.secEdgeplankBuffer, 0, secEdgePlank);
 
         const wallIndices = new Uint32Array([
             0, 1, 2,    // Spodnji trikotnik
@@ -155,6 +217,25 @@ export class Wall {
             1, 0, 5,    5, 0, 4,
         ]);
 
+        const edgePlankIndices = new Uint32Array([
+            0, 1, 2,    2, 1, 3,
+            4, 0, 6,    6, 0, 2,
+            5, 4, 7,    7, 4, 6,
+            1, 5, 3,    3, 5, 7,
+            6, 2, 7,    7, 2, 3,
+            1, 0, 5,    5, 0, 4,
+        ]);
+
+        const secEdgePlankIndices = new Uint32Array([
+            0, 1, 2,    2, 1, 3,
+            4, 0, 6,    6, 0, 2,
+            5, 4, 7,    7, 4, 6,
+            1, 5, 3,    3, 5, 7,
+            6, 2, 7,    7, 2, 3,
+            1, 0, 5,    5, 0, 4,
+        ]);
+
+
         this.wallIndexBuffer = device.createBuffer({
             size: wallIndices.byteLength,
             usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
@@ -165,12 +246,25 @@ export class Wall {
             usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
         });
 
+        this.edgePlankIndexBuffer = device.createBuffer({
+            size: edgePlankIndices.byteLength,
+            usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+        });
+
+        this.secEdgePlankIndexBuffer = device.createBuffer({
+            size: secEdgePlankIndices.byteLength,
+            usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+        });
+
         device.queue.writeBuffer(this.wallIndexBuffer, 0, wallIndices);
         device.queue.writeBuffer(this.plankIndexBuffer, 0, plankIndices);
+        device.queue.writeBuffer(this.edgePlankIndexBuffer, 0, edgePlankIndices);
+        device.queue.writeBuffer(this.secEdgePlankIndexBuffer, 0, secEdgePlankIndices);
 
         this.indexCount = wallIndices.length;
         this.plankIndexCount = plankIndices.length;
-
+        this.edgePlankIndexCount = edgePlankIndices.length;
+        this.secEdgePlankIndexCount = secEdgePlankIndices.length;
 
         this.wallUniformBuffer = device.createBuffer({
             size: 16 * 4,
@@ -178,6 +272,16 @@ export class Wall {
         });
 
         this.plankUniformBuffer = device.createBuffer({
+            size: 16 * 4,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+
+        this.edgePlankUniformBuffer = device.createBuffer({
+            size: 16 * 4,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+
+        this.secEdgePlankUniformBuffer = device.createBuffer({
             size: 16 * 4,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
@@ -195,6 +299,24 @@ export class Wall {
             layout: pipeline.getBindGroupLayout(0),
             entries: [
                 { binding: 0, resource: { buffer: this.plankUniformBuffer } },
+                { binding: 1, resource: this.texture2.createView() },
+                { binding: 2, resource: sampler },
+            ]
+        });
+
+        this.edgePlankBindGroup = device.createBindGroup({
+            layout: pipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: this.edgePlankUniformBuffer} },
+                { binding: 1, resource: this.texture2.createView() },
+                { binding: 2, resource: sampler },
+            ]
+        });
+
+        this.secEdgePlankBindGroup = device.createBindGroup({
+            layout: pipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: this.secEdgePlankUniformBuffer} },
                 { binding: 1, resource: this.texture2.createView() },
                 { binding: 2, resource: sampler },
             ]
@@ -218,6 +340,8 @@ export class Wall {
 
         this.device.queue.writeBuffer(this.wallUniformBuffer, 0, matrix);
         this.device.queue.writeBuffer(this.plankUniformBuffer, 0, matrix);
+        this.device.queue.writeBuffer(this.edgePlankUniformBuffer, 0, matrix);
+        this.device.queue.writeBuffer(this.secEdgePlankUniformBuffer, 0, matrix);
 
     }
 
@@ -234,6 +358,16 @@ export class Wall {
         renderPass.setIndexBuffer(this.plankIndexBuffer, 'uint32');
         renderPass.setBindGroup(0, this.plankBindGroup);
         renderPass.drawIndexed(this.plankIndexCount);
+
+        renderPass.setVertexBuffer(0, this.edgeplankBuffer);
+        renderPass.setIndexBuffer(this.edgePlankIndexBuffer, 'uint32');
+        renderPass.setBindGroup(0, this.edgePlankBindGroup);
+        renderPass.drawIndexed(this.edgePlankIndexCount);
+
+        renderPass.setVertexBuffer(0, this.secEdgeplankBuffer);
+        renderPass.setIndexBuffer(this.secEdgePlankIndexBuffer, 'uint32');
+        renderPass.setBindGroup(0, this.secEdgePlankBindGroup);
+        renderPass.drawIndexed(this.secEdgePlankIndexCount);
     }
 
         
