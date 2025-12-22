@@ -162,11 +162,11 @@ ground.addComponent(new Transform());  // Ground is at origin
 
 const camera = new Node();
 camera.addComponent(new Camera({
-    fovy: 1,
+    fovy: 1.5,
     aspect: 1,
 }));
 camera.addComponent(new Transform({
-    translation: [0, 6, 0] //10
+    translation: [0, 6.5, 0] //6
 }));
 
 let cameraDeafultZ = camera.getComponentOfType(Transform).translation[1];
