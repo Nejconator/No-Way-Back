@@ -3,8 +3,10 @@ import { Transform } from './Transform.js';
 import { Camera } from './Camera.js';
 import { Node } from './Node.js';
 import { Wall } from './wall.js';
+import { monkey } from './monkey.js';
 import { Collisions } from './Collisions.js';
 import { floorSize, walls } from './Positions.js';
+import { corners } from './corner.js';
 import {
     getGlobalModelMatrix,
     getGlobalViewMatrix,
@@ -27,8 +29,50 @@ context.configure({
     size: [canvas.width, canvas.height],
 });
 await Wall.loadTexture(device);
+await monkey.loadTexture(device);
 
 
+
+const cornerCordinates = [
+    [0,5,0],        //0
+    [-2,5,-5],      //1
+    [-10,5,-5],     //2
+    [-10,5,11],     //3
+    [-16,5,11],     //4
+    [-22,5,11],     //5
+    [-22,5,-9],     //6
+    [-28,5,-9],     //7
+    [-28,5,-17],    //8
+    [-28,5,-28],    //9
+    [-2,5,-28],     //10
+    [-2,5,-17],     //11
+    [28,5,-28],     //12
+    [28,5,-13],     //13
+    [12,5,-13],     //14
+    [12,5,-5],      //15
+    [12,5,2],       //16
+    [24,5,2],       //17
+    [24,5,20],      //18
+    [12,5,20],      //19
+    [12,5,28],      //20
+    [-16,5,28],     //21
+    [2,5,20],       //22
+    [2,5,11],       //23
+    [12,5,11],      //24
+    [0,5,-5],       //25
+    [],             //player 
+]
+
+const Corners = [];
+let j=0;
+for(const c of corners){
+    Corners[j] = [];
+    Corners[j][0]=c.c1;
+    Corners[j][1]=c.c2;
+    Corners[j][2]=c.c3;
+    Corners[j][3]=c.c4;
+    j++;
+}
 
 const repeatU = 30 / 2.5 ;
 const repeatV = 30 / 2.5 ;
@@ -178,6 +222,8 @@ const wall3 = new Wall(device, pipeline, camera, [0, 0, -30], 0, 30);
 const wall4 = new Wall(device, pipeline, camera, [-15, 0, 0], 1, 15);
 */
 
+const Monkey = new monkey(device,pipeline,camera, [-2,5,-17]);
+
 const wallsArray = []; 
 let i = 0;
 for (const w of walls) {
@@ -224,6 +270,11 @@ function AngleBetweenVectors(v1, v2) {
     }
     return angleBetween;
 }
+
+function VectLenght(vect){
+    return Math.sqrt(vect[0]*vect[0] + vect[1]*vect[1] + vect[2]*vect[2]);
+}
+
 // nastavitve za premikanje ----------------------------------------------------------
 const cameraSpeed = 0.1;
 const keysPressed = {};
@@ -279,7 +330,7 @@ camera.addComponent({
 
         // računa kot za koliko je kamera rotirana glede na začetno smer
         let angleBetween = AngleBetweenVectors(vectorCameraToRef, vectorCameraToForward);
-        console.log("Angle: " + angleBetween*(180/Math.PI));
+        //console.log("Angle: " + angleBetween*(180/Math.PI));
 
         //za forward in backward
         let Xtravel = Math.sin(angleBetween)*(cameraSpeed);
@@ -346,10 +397,11 @@ camera.addComponent({
         }
             transform.translation[1] += velocityUp;
         
+            /*
         if (keysPressed['Shift']) { 
             //transform.translation[1] -= 1;
         }
-
+        */
         
 
         velocityW -= velocityFactor;
@@ -367,20 +419,97 @@ camera.addComponent({
             camera.getComponentOfType(Transform).translation[1] = cameraDeafultZ;
         } 
 
-        console.log("x:" + transform.translation[0] + " z:" + transform.translation[1] + " y:" + transform.translation[2]);
+        //console.log("x:" + transform.translation[0] + " z:" + transform.translation[1] + " y:" + transform.translation[2]);
+    }
+});
+
+let targetCornerIndex = 1;
+let targetCorner = cornerCordinates[targetCornerIndex];
+const MonkeySpeed = 0.05;
+let distToCorner = 10;
+
+Monkey.returnNode().addComponent({
+    update(){
+        const MonkeyTransform = Monkey.returnNode().getComponentOfType(Transform);
+        const rotation = MonkeyTransform.rotation;
+
+        const CameraPos = camera.getComponentOfType(Transform).translation;
+        const vectToPlayer = [CameraPos[0] - MonkeyTransform.translation[0], CameraPos[1] - MonkeyTransform.translation[1], CameraPos[2] - MonkeyTransform.translation[2]];
+        const distToPlyr = VectLenght(vectToPlayer);
+
+        const pointUP = [MonkeyTransform.translation[0], MonkeyTransform.translation[1], MonkeyTransform.translation[2]-5];
+        const vectUP = [pointUP[0] - MonkeyTransform.translation[0], pointUP[1] - MonkeyTransform.translation[1], pointUP[2] - MonkeyTransform.translation[2]];
+
+        if(distToCorner<=0.05){
+            
+            const pointDOWN = [MonkeyTransform.translation[0], MonkeyTransform.translation[1], MonkeyTransform.translation[2]+5];
+            const pointLEFT = [MonkeyTransform.translation[0]-5, MonkeyTransform.translation[1], MonkeyTransform.translation[2]];
+            const pointRIGHT = [MonkeyTransform.translation[0]+5, MonkeyTransform.translation[1], MonkeyTransform.translation[2]];
+            const vectDOWN = [pointDOWN[0] - MonkeyTransform.translation[0], pointDOWN[1] - MonkeyTransform.translation[1], pointDOWN[2] - MonkeyTransform.translation[2]];
+            const vectLEFT = [pointLEFT[0] - MonkeyTransform.translation[0], pointLEFT[1] - MonkeyTransform.translation[1], pointLEFT[2] - MonkeyTransform.translation[2]];
+            const vectRIGHT = [pointRIGHT[0] - MonkeyTransform.translation[0], pointRIGHT[1] - MonkeyTransform.translation[1], pointRIGHT[2] - MonkeyTransform.translation[2]];
+
+            let angleToUP = AngleBetweenVectors(vectToPlayer, vectUP);
+            let angleToDOWN = AngleBetweenVectors(vectToPlayer, vectDOWN);
+            let angleToLEFT = AngleBetweenVectors(vectToPlayer, vectLEFT);
+            let angleToRIGHT = AngleBetweenVectors(vectToPlayer, vectRIGHT);
+
+            if(Corners[targetCornerIndex][0] == null) angleToUP = 999;
+            if(Corners[targetCornerIndex][1] == null) angleToDOWN = 999;
+            if(Corners[targetCornerIndex][2] == null) angleToLEFT = 999;
+            if(Corners[targetCornerIndex][3] == null) angleToRIGHT = 999;
+
+            let minAngle = Math.min(Math.abs(angleToUP), Math.abs(angleToDOWN), Math.abs(angleToLEFT), Math.abs(angleToRIGHT));
+
+            if(minAngle === Math.abs(angleToUP)){
+                targetCornerIndex = Corners[targetCornerIndex][0];
+                targetCorner = cornerCordinates[targetCornerIndex];
+
+            }else if(minAngle === Math.abs(angleToDOWN)){
+                targetCornerIndex = Corners[targetCornerIndex][1];
+                targetCorner = cornerCordinates[targetCornerIndex];
+
+            }else if(minAngle === Math.abs(angleToLEFT)){
+                targetCornerIndex = Corners[targetCornerIndex][2];
+                targetCorner = cornerCordinates[targetCornerIndex];
+
+            }else if(minAngle === Math.abs(angleToRIGHT)){
+                targetCornerIndex = Corners[targetCornerIndex][3];
+                targetCorner = cornerCordinates[targetCornerIndex];
+
+            }
+        }
+
+        const vectToCorner = [targetCorner[0] - MonkeyTransform.translation[0], targetCorner[1] - MonkeyTransform.translation[1], targetCorner[2] - MonkeyTransform.translation[2]];
+        distToCorner = VectLenght(vectToCorner);
+
+        let angleToCorner = AngleBetweenVectors(vectToCorner, vectUP);
+        console.log("pos: x:" + MonkeyTransform.translation[0] + " z:" + MonkeyTransform.translation[1] + " y:" + MonkeyTransform.translation[2]);
+        console.log("dist to corner: " + distToCorner + " corner index: " + targetCornerIndex);
+
+        let MonkeyXtravel = Math.sin(angleToCorner)*(MonkeySpeed);
+        let MonkeyYtravel = Math.cos(angleToCorner)*(MonkeySpeed); 
+        
+
+        MonkeyTransform.translation[0] += MonkeyXtravel;
+        MonkeyTransform.translation[2] -= MonkeyYtravel;
     }
 });
 
 
 
 window.addEventListener('keydown', (e) => {
-    keysPressed[e.key] = true;
-    if (e.key === ' ') keysPressed[' '] = true;
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    keysPressed[key] = true;
 });
 
 window.addEventListener('keyup', (e) => {
-    keysPressed[e.key] = false;
-    if (e.key === ' ') keysPressed[' '] = false;
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    keysPressed[key] = false;
+});
+
+window.addEventListener('blur', () => {
+    for (const key in keysPressed) keysPressed[key] = false;
 });
 
 
@@ -392,6 +521,8 @@ scene.addChild(wall2.returnNode());
 scene.addChild(wall3.returnNode());
 scene.addChild(wall4.returnNode());
 */
+
+scene.addChild(Monkey.returnNode());
 
 for (let j=0; j<wallsArray.length; j++) {
     scene.addChild(wallsArray[j].returnNode());
@@ -428,6 +559,8 @@ function render() {
     wall3.updateRender();
     wall4.updateRender();
     */
+
+    Monkey.updateRender();
     
     for (let j=0; j<wallsArray.length; j++) {
         wallsArray[j].updateRender();
@@ -462,6 +595,7 @@ function render() {
     wall3.draw(renderPass);
     wall4.draw(renderPass);
     */
+    Monkey.draw(renderPass);
 
     
     for (let j=0; j<wallsArray.length; j++) {
