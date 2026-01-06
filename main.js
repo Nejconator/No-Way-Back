@@ -222,7 +222,7 @@ const wall3 = new Wall(device, pipeline, camera, [0, 0, -30], 0, 30);
 const wall4 = new Wall(device, pipeline, camera, [-15, 0, 0], 1, 15);
 */
 
-const Monkey = new monkey(device,pipeline,camera, [-2,5,-17]);
+const Monkey = new monkey(device,pipeline,camera, [2,5,20]);
 
 const wallsArray = []; 
 let i = 0;
@@ -423,9 +423,9 @@ camera.addComponent({
     }
 });
 
-let targetCornerIndex = 1;
+let targetCornerIndex = 23;
 let targetCorner = cornerCordinates[targetCornerIndex];
-const MonkeySpeed = 0.05;
+const MonkeySpeed = 0.075;
 let distToCorner = 10;
 
 Monkey.returnNode().addComponent({

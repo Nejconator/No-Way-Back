@@ -1,7 +1,7 @@
 export const corners = [
     { c1: 25, c2: null, c3: null, c4: null },   //0
     { c1: 11, c2: null, c3: 2, c4: 25 },        //1
-    { c1: null, c2: 3, c3: 1, c4: null },   //2
+    { c1: null, c2: 3, c3: null, c4: 1 },   //2
     { c1: 2, c2: null, c3: 4, c4: 23 },        //3
     { c1: null, c2: 21, c3: 5, c4: 3 },        //4
     { c1: 6, c2: null, c3: null, c4: 4 },    //5
