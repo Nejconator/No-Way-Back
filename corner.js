@@ -26,3 +26,5 @@ export const corners = [
     { c1: 16, c2: null, c3: 23, c4: null }, //24
     { c1: null, c2: 0, c3: 1, c4: 15 },     //25
 ];
+
+

@@ -7,6 +7,7 @@ import { monkey } from './monkey.js';
 import { Collisions } from './Collisions.js';
 import { floorSize, walls } from './Positions.js';
 import { corners } from './corner.js';
+import { Shard } from './shard.js';
 import {
     getGlobalModelMatrix,
     getGlobalViewMatrix,
@@ -30,6 +31,7 @@ context.configure({
 });
 await Wall.loadTexture(device);
 await monkey.loadTexture(device);
+await Shard.loadTexture(device);
 
 
 
@@ -72,6 +74,110 @@ for(const c of corners){
     Corners[j][2]=c.c3;
     Corners[j][3]=c.c4;
     j++;
+}
+
+let shardPositions = [
+    [-28,2.5,-28],
+    [-24,2.5,-28],
+    [-20,2.5,-28],
+    [-16,2.5,-28],
+    [-12,2.5,-28],
+    [-8,2.5,-28],
+    [-4,2.5,-28],
+    [0,2.5,-28],
+    [4,2.5,-28],
+    [8,2.5,-28],
+    [12,2.5,-28],
+    [16,2.5,-28],
+    [20,2.5,-28],
+    [24,2.5,-28],
+    [28,2.5,-28],
+    [-28,2.5,-24],
+    [-28,2.5,-20],
+    [-28,2.5,-16],
+    [-28,2.5,-12],
+    [-22,2.5,-9],
+    [-22,2.5,-5],
+    [-22,2.5,-1],
+    [-22,2.5,3],
+    [-22,2.5,7],
+    [-22,2.5,11],
+    [-18,2.5,11],
+    [-14,2.5,11],
+    [-10,2.5,11],
+    [-6,2.5,11],
+    [-2,2.5,11],
+    [2,2.5,11],
+    [6,2.5,11],
+    [10,2.5,11],
+    [-16,2.5,15],
+    [-16,2.5,19],
+    [-16,2.5,23],
+    [-16,2.5,28],
+    [-12,2.5,28],
+    [-8,2.5,28],
+    [-4,2.5,28],
+    [0,2.5,28],
+    [4,2.5,28],
+    [8,2.5,28],
+    [12,2.5,28],
+    [12,2.5,24],
+    [2,2.5,20],
+    [6,2.5,20],
+    [10,2.5,20],
+    [14,2.5,20],
+    [18,2.5,20],
+    [24,2.5,20],
+    [24,2.5,16],
+    [24,2.5,12],
+    [24,2.5,6],
+    [24,2.5,2],
+    [20,2.5,2],
+    [16,2.5,2],
+    [12,2.5,2],
+    [12,2.5,-2],
+    [12,2.5,-7],
+    [12,2.5,-2],
+    [12,2.5,-5],
+    [12,2.5,-9],
+    [12,2.5,-13],
+    [16,2.5,-13],
+    [20,2.5,-13],
+    [24,2.5,-13],
+    [28,2.5,-13],
+    [28,2.5,-17],
+    [28,2.5,-21],
+    [28,2.5,-25],
+    [-2,2.5,-24],
+    [-2,2.5,-20],
+    [-2,2.5,-16],
+    [-2,2.5,-12],
+    [-2,2.5,-8],
+    [-2,2.5,-5],
+    [-22,2.5,-17],
+    [-18,2.5,-17],
+    [-14,2.5,-17],
+    [-10,2.5,-17],
+    [-6,2.5,-17],
+    [-10,2.5,-5],
+    [-10,2.5,-1],
+    [-10,2.5,3],
+    [-10,2.5,7],
+    [2,2.5,16],
+    
+];
+
+const shardNum = 15;
+
+const shards = [];
+let k=0;
+while(k<shardNum){
+    const Index = Math.floor(Math.random() * shardPositions.length);
+    shards[k] = [];
+    shards[k][0] = shardPositions[Index];
+    shards[k][1] = true;
+    shardPositions.splice(Index, 1);
+    k++;
 }
 
 const repeatU = 30 / 2.5 ;
@@ -223,6 +329,14 @@ const wall4 = new Wall(device, pipeline, camera, [-15, 0, 0], 1, 15);
 */
 
 const Monkey = new monkey(device,pipeline,camera, [2,5,20]);
+
+const shard = new Shard(device, pipeline, camera, [0,2.5,0]);
+
+const shrdArray = [];
+for (let k = 0; k < shards.length; k++) {
+    shrdArray[k] = new Shard(device, pipeline, camera, shards[k][0]);
+}
+
 
 const wallsArray = []; 
 let i = 0;
@@ -496,6 +610,21 @@ Monkey.returnNode().addComponent({
     }
 });
 
+for (let k = 0; k < shrdArray.length; k++) {
+    shrdArray[k].returnNode().addComponent({
+        update(){
+            const ShardTransform = shrdArray[k].returnNode().getComponentOfType(Transform).translation;
+            const CameraPos2 = camera.getComponentOfType(Transform).translation;
+            const vectToPlayer2 = [CameraPos2[0] - ShardTransform[0], 0, CameraPos2[2] - ShardTransform[2]];
+            const distToPlyr2 = VectLenght(vectToPlayer2);
+
+            if(distToPlyr2 < 2 && shards[k][1] === true){
+                shards[k][1] = false;
+            }
+        }
+    });
+}
+
 
 
 window.addEventListener('keydown', (e) => {
@@ -523,6 +652,12 @@ scene.addChild(wall4.returnNode());
 */
 
 scene.addChild(Monkey.returnNode());
+
+scene.addChild(shard.returnNode());
+
+for(let k=0; k<shrdArray.length; k++) {
+    scene.addChild(shrdArray[k].returnNode());
+}
 
 for (let j=0; j<wallsArray.length; j++) {
     scene.addChild(wallsArray[j].returnNode());
@@ -561,6 +696,14 @@ function render() {
     */
 
     Monkey.updateRender();
+
+    shard.updateRender();
+
+    for (let k=0; k<shrdArray.length; k++) {
+        if(shards[k][1] === true){
+            shrdArray[k].updateRender();
+        }
+    }
     
     for (let j=0; j<wallsArray.length; j++) {
         wallsArray[j].updateRender();
@@ -597,9 +740,17 @@ function render() {
     */
     Monkey.draw(renderPass);
 
+    shard.draw(renderPass);
+
     
     for (let j=0; j<wallsArray.length; j++) {
         wallsArray[j].draw(renderPass);
+    }
+
+    for (let k=0; k<shrdArray.length; k++) {
+        if(shards[k][1] === true){
+            shrdArray[k].draw(renderPass);
+        }
     }
     
     renderPass.end();
@@ -642,24 +793,14 @@ for (const w of walls) {
         meta: { type: "wall" }
     });
 }
- 
-const orbColliders = []; 
-
+  
 
 const collisions = new Collisions({
     playerNode: camera,
     playerSize: [1, 6, 1],   
-    wallColliders,
-    orbColliders
+    wallColliders
 });
 
-collisions.onOrbCollect = (orbMeta) => {
-    console.log('Orb collected!', orbMeta);
-    // Example actions:
-    // - remove orb from scene
-    // - increment score
-    // - mark orb as collected in orbColliders array
-};
 
 function frame() {
     update();

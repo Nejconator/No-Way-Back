@@ -1,13 +1,11 @@
 import { Transform } from './Transform.js';
 
 export class Collisions {
-    constructor({ playerNode, playerSize = [1, 1.8, 1], wallColliders = [], orbColliders = [] } = {}) {
+    constructor({ playerNode, playerSize = [1, 1.8, 1], wallColliders = [] }) {
         this.playerNode = playerNode;
         this.playerSize = this._toVec(playerSize);
         this.wallColliders = wallColliders.slice();
-        this.orbColliders = orbColliders.slice();
-
-        this.onOrbCollect = null;
+       
     }
 
     _toVec(s) {
@@ -102,36 +100,11 @@ export class Collisions {
             }
         }
 
-        const collected = [];
-        for (let i = 0; i < this.orbColliders.length; i++) {
-            const oc = this.orbColliders[i];
-            const node = oc.node ?? oc;
-            const size = this._toVec(oc.size ?? [1,1,1]);
-            const aabb = this._getAABB(node, size);
-            if (this._aabbIntersect(playerAABB, aabb)) {
-                collected.push(i);
-
-                try {
-                    if (typeof this.onOrbCollect === 'function') {
-                        this.onOrbCollect(oc.meta ?? oc);
-                    }
-                } catch (e) {
-                    console.error('onOrbCollect callback error', e);
-                }
-            }
-        }
-
-        for (let i = collected.length - 1; i >= 0; i--) {
-            const idx = collected[i];
-            this.orbColliders.splice(idx, 1);
-        }
     }
 
     addWall(node, size = [1,1,1], meta = {}) {
         this.wallColliders.push({ node, size, meta });
     }
 
-    addOrb(node, size = [1,1,1], meta = {}) {
-        this.orbColliders.push({ node, size, meta });
-    }
+    
 }
