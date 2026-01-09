@@ -195,6 +195,14 @@ const vertex = new Float32Array([
      30, 0,  30,  1,     repeatU, repeatV,  // 3 - zadaj desno
 ]);
 
+const Roof = new Float32Array([
+// positions            //texcoords         
+    -30, 10, -30,  1,     0, 0,  // 0 - spredaj levo (zelena trava)
+     30, 10, -30,  1,     repeatU, 0,  // 1 - spredaj desno
+    -30, 10,  30,  1,     0, repeatV,  // 2 - zadaj levo (temnejša)
+     30, 10,  30,  1,     repeatU, repeatV,  // 3 - zadaj desno
+]);    
+
 const imageBitmap = await fetch('Red-carpet.jpg')
 .then(response => response.blob())
 .then(blob => createImageBitmap(blob));
@@ -225,7 +233,13 @@ const vertexBuffer = device.createBuffer({
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
 });
 
+const roofBuffer = device.createBuffer({
+    size: Roof.byteLength,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+});
+
 device.queue.writeBuffer(vertexBuffer, 0, vertex);
+device.queue.writeBuffer(roofBuffer, 0, Roof);
 
 // Create index buffer
 const indices = new Uint32Array([
@@ -233,13 +247,20 @@ const indices = new Uint32Array([
     2, 1, 3,    // Drugi trikotnik
 ]);
 
+
+
 const indexBuffer = device.createBuffer({
     size: indices.byteLength,
     usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
 });
 
-device.queue.writeBuffer(indexBuffer, 0, indices);
+const roofIndexBuffer = device.createBuffer({
+    size: indices.byteLength,
+    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+});
 
+device.queue.writeBuffer(indexBuffer, 0, indices);
+device.queue.writeBuffer(roofIndexBuffer, 0, indices);
 
 // Create the depth texture
 const depthTexture = device.createTexture({
@@ -293,6 +314,11 @@ const uniformBuffer = device.createBuffer({
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
+const roofUniformBuffer = device.createBuffer({
+    size: 16 * 4,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+});
+
 
 // Create the bind group for texture
 const bindGroup = device.createBindGroup({
@@ -304,14 +330,23 @@ const bindGroup = device.createBindGroup({
     ]
 });
 
-
-
+const roofBindGroup = device.createBindGroup({
+    layout: pipeline.getBindGroupLayout(0),
+    entries: [
+        { binding: 0, resource: { buffer: roofUniformBuffer } },
+        { binding: 1, resource: texture.createView() },
+        { binding: 2, resource: sampler },
+    ]
+});
 
 // Create the scene
 
 
 const ground = new Node();
 ground.addComponent(new Transform());  // Ground is at origin
+
+const roof = new Node();
+roof.addComponent(new Transform());
 
 const camera = new Node();
 camera.addComponent(new Camera({
@@ -755,6 +790,7 @@ function render() {
         .multiply(modelMatrix);
 
     device.queue.writeBuffer(uniformBuffer, 0, matrix);
+    device.queue.writeBuffer(roofUniformBuffer, 0, matrix);
 
     /*
     wall1.updateRender();
@@ -764,9 +800,7 @@ function render() {
     */
 
     Monkey.updateRender();
-
     shard.updateRender();
-
     door.updateRender();
     door2.updateRender();
 
@@ -802,6 +836,11 @@ function render() {
     renderPass.setIndexBuffer(indexBuffer, 'uint32');
     renderPass.setBindGroup(0, bindGroup);
     renderPass.drawIndexed(indices.length);
+
+    renderPass.setVertexBuffer(0, roofBuffer);
+    renderPass.setIndexBuffer(roofIndexBuffer, 'uint32');
+    renderPass.setBindGroup(0, roofBindGroup);
+    renderPass.drawIndexed(indices.length);
     
     /*
     wall1.draw(renderPass);
@@ -810,9 +849,7 @@ function render() {
     wall4.draw(renderPass);
     */
     Monkey.draw(renderPass);
-
     shard.draw(renderPass);
-
     door.draw(renderPass);
     door2.draw(renderPass);
     
