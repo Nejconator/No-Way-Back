@@ -207,8 +207,21 @@ const imageBitmap = await fetch('Red-carpet.jpg')
 .then(response => response.blob())
 .then(blob => createImageBitmap(blob));
 
+const imageBitmap2 = await fetch('roof.jpg')
+.then(response => response.blob())
+.then(blob => createImageBitmap(blob));
+
 const texture = device.createTexture({
     size: [imageBitmap.width, imageBitmap.height],
+    format: 'rgba8unorm',
+    usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.RENDER_ATTACHMENT |
+        GPUTextureUsage.COPY_DST,
+});
+
+const texture2 = device.createTexture({
+    size: [imageBitmap2.width, imageBitmap2.height],
     format: 'rgba8unorm',
     usage:
         GPUTextureUsage.TEXTURE_BINDING |
@@ -227,6 +240,11 @@ device.queue.copyExternalImageToTexture(
         magFilter: "linear",
         minFilter: "linear",
     });
+
+device.queue.copyExternalImageToTexture(
+    { source: imageBitmap2 },
+    { texture: texture2 },
+    [imageBitmap2.width, imageBitmap2.height]);
 
 const vertexBuffer = device.createBuffer({
     size: vertex.byteLength,
@@ -334,7 +352,7 @@ const roofBindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
     entries: [
         { binding: 0, resource: { buffer: roofUniformBuffer } },
-        { binding: 1, resource: texture.createView() },
+        { binding: 1, resource: texture2.createView() },
         { binding: 2, resource: sampler },
     ]
 });
@@ -368,7 +386,7 @@ const wall4 = new Wall(device, pipeline, camera, [-15, 0, 0], 1, 15);
 
 const Monkey = new monkey(device,pipeline,camera, [2,5,20]);
 
-const shard = new Shard(device, pipeline, camera, [0,2.5,0]);
+const shard = new Shard(device, pipeline, camera, [0,2.5,6.5]);
 
 const door = new Door(device, pipeline, camera, [-0.75,0,4]);
 const door2 = new Door(device, pipeline, camera, [0.75,0,4]);
@@ -665,6 +683,7 @@ Monkey.returnNode().addComponent({
     }
 });
 
+let Srot = 0;
 for (let k = 0; k < shrdArray.length; k++) {
     shrdArray[k].returnNode().addComponent({
         update(){
@@ -673,6 +692,11 @@ for (let k = 0; k < shrdArray.length; k++) {
             const CameraPos2 = camera.getComponentOfType(Transform).translation;
             const vectToPlayer2 = [CameraPos2[0] - ShardTransform[0], 0, CameraPos2[2] - ShardTransform[2]];
             const distToPlyr2 = VectLenght(vectToPlayer2);
+
+            const ShardT = shrdArray[k].returnNode().getComponentOfType(Transform);
+            const ShardRotation = ShardT.rotation;
+            quat.identity(ShardRotation);
+            quat.rotateY(ShardRotation, ShardRotation, Srot+=0.001);
 
             if(distToPlyr2 < 2 ){
                 shards[k][1] = false;
