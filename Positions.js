@@ -53,7 +53,7 @@ export const walls = [
     { pos: [10, 0, 3], size: [1, 25, 12], rotation: 1 },      //36
     { pos: [7, 0, -3], size: [6, 25, 1], rotation: 0 },       //37
     { pos: [4, 0, 0.5], size: [1, 25, 7], rotation: 1 },      //38
-    { pos: [0, 0, 4], size: [8, 25, 1], rotation: 0 },        //39
+    //{ pos: [0, 0, 4], size: [8, 25, 1], rotation: 0 },        //39
     { pos: [-4, 0, 0.5], size: [1, 25, 7], rotation: 1 },     //40
     { pos: [-6, 0, -3], size: [4, 25, 1], rotation: 0 },      //41
     { pos: [-8, 0, 3], size: [1, 25, 12], rotation: 1 },      //42

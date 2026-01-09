@@ -8,6 +8,7 @@ import { Collisions } from './Collisions.js';
 import { floorSize, walls } from './Positions.js';
 import { corners } from './corner.js';
 import { Shard } from './shard.js';
+import { Door } from './doors.js';
 import {
     getGlobalModelMatrix,
     getGlobalViewMatrix,
@@ -32,6 +33,7 @@ context.configure({
 await Wall.loadTexture(device);
 await monkey.loadTexture(device);
 await Shard.loadTexture(device);
+await Door.loadTexture(device);
 
 
 
@@ -168,6 +170,7 @@ let shardPositions = [
 ];
 
 const shardNum = 15;
+let shardCollected = 0;
 
 const shards = [];
 let k=0;
@@ -332,6 +335,9 @@ const Monkey = new monkey(device,pipeline,camera, [2,5,20]);
 
 const shard = new Shard(device, pipeline, camera, [0,2.5,0]);
 
+const door = new Door(device, pipeline, camera, [-0.75,0,4]);
+const door2 = new Door(device, pipeline, camera, [0.75,0,4]);
+
 const shrdArray = [];
 for (let k = 0; k < shards.length; k++) {
     shrdArray[k] = new Shard(device, pipeline, camera, shards[k][0]);
@@ -407,7 +413,7 @@ window.addEventListener('mousemove', (e) => {
     MouseY += e.movementY;
 });
 
-
+let dooropened = false;
 
 let velocityW = 0;
 let velocityS = 0;
@@ -446,6 +452,11 @@ camera.addComponent({
         let angleBetween = AngleBetweenVectors(vectorCameraToRef, vectorCameraToForward);
         //console.log("Angle: " + angleBetween*(180/Math.PI));
 
+
+        const vTd = [vecCamera[0] , 0, vecCamera[2] - 4];
+        const distT = VectLenght(vTd);
+        
+
         //za forward in backward
         let Xtravel = Math.sin(angleBetween)*(cameraSpeed);
         let Ytravel = Math.cos(angleBetween)*(cameraSpeed); 
@@ -458,6 +469,15 @@ camera.addComponent({
         let Ysideways = Math.cos(angleBetween + Math.PI/2)*(cameraSpeed*0.6);
         if (angleBetween*(180/Math.PI) < 0) {
             Ysideways = -Ysideways;
+        }
+
+        
+        if(distT < 6 && vecCamera[2] < 4 && vecCamera[2] > 3  && (dooropened === false)){
+            console.log("not pass");
+            if(vecCamera[2] + Ytravel > 3.5 && vecCamera[2] + Ysideways > 3.5 && (angleBetween*(180/Math.PI) > 50 || angleBetween*(180/Math.PI) < -50)){
+                Ytravel = 0;
+                Ysideways = 0;
+            }
         }
 
         
@@ -539,7 +559,7 @@ camera.addComponent({
 
 let targetCornerIndex = 23;
 let targetCorner = cornerCordinates[targetCornerIndex];
-const MonkeySpeed = 0.075;
+const MonkeySpeed = 0.05;
 let distToCorner = 10;
 
 Monkey.returnNode().addComponent({
@@ -598,8 +618,8 @@ Monkey.returnNode().addComponent({
         distToCorner = VectLenght(vectToCorner);
 
         let angleToCorner = AngleBetweenVectors(vectToCorner, vectUP);
-        console.log("pos: x:" + MonkeyTransform.translation[0] + " z:" + MonkeyTransform.translation[1] + " y:" + MonkeyTransform.translation[2]);
-        console.log("dist to corner: " + distToCorner + " corner index: " + targetCornerIndex);
+        //console.log("pos: x:" + MonkeyTransform.translation[0] + " z:" + MonkeyTransform.translation[1] + " y:" + MonkeyTransform.translation[2]);
+        //console.log("dist to corner: " + distToCorner + " corner index: " + targetCornerIndex);
 
         let MonkeyXtravel = Math.sin(angleToCorner)*(MonkeySpeed);
         let MonkeyYtravel = Math.cos(angleToCorner)*(MonkeySpeed); 
@@ -613,17 +633,62 @@ Monkey.returnNode().addComponent({
 for (let k = 0; k < shrdArray.length; k++) {
     shrdArray[k].returnNode().addComponent({
         update(){
+            if(shards[k][1] === false) return;
             const ShardTransform = shrdArray[k].returnNode().getComponentOfType(Transform).translation;
             const CameraPos2 = camera.getComponentOfType(Transform).translation;
             const vectToPlayer2 = [CameraPos2[0] - ShardTransform[0], 0, CameraPos2[2] - ShardTransform[2]];
             const distToPlyr2 = VectLenght(vectToPlayer2);
 
-            if(distToPlyr2 < 2 && shards[k][1] === true){
+            if(distToPlyr2 < 2 ){
                 shards[k][1] = false;
+                shardCollected++;
+                console.log("Shard collected: " + shardCollected + "/" + shardNum);
             }
         }
     });
 }
+
+let doorOpen = false;
+
+door.returnNode().addComponent({
+    update(){
+        const doorTransform = door.returnNode().getComponentOfType(Transform).translation;
+        const CameraPos3 = camera.getComponentOfType(Transform).translation;
+        const vectToPlayer3 = [CameraPos3[0] - doorTransform[0], 0, CameraPos3[2] - doorTransform[2]];
+        const distToPlyr3 = VectLenght(vectToPlayer3);
+
+        if(distToPlyr3 < 5 && shardCollected === shardNum && (keysPressed['e'] || keysPressed['E'])){  
+            doorOpen = true;
+            collisions.removeWall(meta => meta?.type === 'door');
+        }
+        if(doorTransform[0] > -2.25 && doorOpen === true){
+            doorTransform[0] -= 0.01;
+        }
+        if(doorTransform[0] >= -2.25 || doorTransform[0] <= -2.20){
+            dooropened = true;
+        }
+    }
+});
+
+door2.returnNode().addComponent({
+    update(){
+        const door2Transform = door2.returnNode().getComponentOfType(Transform).translation;
+        const CameraPos4 = camera.getComponentOfType(Transform).translation;
+        const vectToPlayer4 = [CameraPos4[0] - door2Transform[0], 0, CameraPos4[2] - door2Transform[2]];
+        const distToPlyr4 = VectLenght(vectToPlayer4);
+
+        if(distToPlyr4 < 5 && shardCollected === shardNum && (keysPressed['e'] || keysPressed['E'])){  
+            doorOpen = true;
+            collisions.removeWall(meta => meta?.type === 'door');
+        }
+        if(door2Transform[0] < 2.25 && doorOpen === true){
+            door2Transform[0] += 0.01;
+        }
+        if(door2Transform[0] >= 2.20 || door2Transform[0] <= 2.25){
+            dooropened = true;
+        }
+    }
+});
 
 
 
@@ -654,6 +719,9 @@ scene.addChild(wall4.returnNode());
 scene.addChild(Monkey.returnNode());
 
 scene.addChild(shard.returnNode());
+
+scene.addChild(door.returnNode());
+scene.addChild(door2.returnNode());
 
 for(let k=0; k<shrdArray.length; k++) {
     scene.addChild(shrdArray[k].returnNode());
@@ -699,6 +767,9 @@ function render() {
 
     shard.updateRender();
 
+    door.updateRender();
+    door2.updateRender();
+
     for (let k=0; k<shrdArray.length; k++) {
         if(shards[k][1] === true){
             shrdArray[k].updateRender();
@@ -742,6 +813,8 @@ function render() {
 
     shard.draw(renderPass);
 
+    door.draw(renderPass);
+    door2.draw(renderPass);
     
     for (let j=0; j<wallsArray.length; j++) {
         wallsArray[j].draw(renderPass);
@@ -782,9 +855,10 @@ const wallColliders = [
         node: { translation: [0, 7.5, 30] }, 
         size: [60, 25, 1], 
         meta: { type: 'wall' } 
-    }
+    },
+    
+];
 
-];  
 
 for (const w of walls) {
     wallColliders.push({
@@ -793,13 +867,14 @@ for (const w of walls) {
         meta: { type: "wall" }
     });
 }
-  
 
 const collisions = new Collisions({
     playerNode: camera,
     playerSize: [1, 6, 1],   
     wallColliders
 });
+  
+
 
 
 function frame() {

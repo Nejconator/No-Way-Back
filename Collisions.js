@@ -106,5 +106,9 @@ export class Collisions {
         this.wallColliders.push({ node, size, meta });
     }
 
+    removeWall(predicate) {
+        this.wallColliders = this.wallColliders.filter(wc => !predicate(wc.meta));
+    }
+
     
 }
