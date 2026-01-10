@@ -12,7 +12,7 @@
             font-family: 'Impact', 'Arial Black', sans-serif;
         }
 
-        /* --- Game Elements --- */
+        
         canvas {
             width: 100vw;
             height: 100vh;
@@ -30,7 +30,7 @@
             display: none;
         }
 
-        /* --- Screens Base Styling --- */
+        
         .overlay-screen {
             position: fixed;
             top: 0;
@@ -63,7 +63,7 @@
             margin-top: 20px;
         }
 
-        /* --- Start Screen (Red/Dark Theme) --- */
+        
         #start-screen {
             display: flex;
             background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('wall_texture.jpg');
@@ -73,7 +73,7 @@
         #start-button { background: #8b0000; color: white; border-color: #ff0000; }
         #start-button:hover { background: #ff0000; box-shadow: 0 0 20px #ff0000; }
 
-        /* --- Win Screen (Green Theme) --- */
+        
         #win-screen {
             background: rgba(0, 0, 0, 0.9);
             color: #00ff00;
@@ -83,7 +83,7 @@
         #restart-win { background: #004400; color: #00ff00; border-color: #00ff00; }
         #restart-win:hover { background: #00ff00; color: black; }
 
-        /* --- Lose Screen (Red Theme) --- */
+        
         #lose-screen {
             background: rgba(0, 0, 0, 0.9);
             color: #ff0000;
@@ -119,6 +119,7 @@
     </div>
 
     <canvas></canvas>
+    
 
     <script type="module">
         const startScreen = document.getElementById('start-screen');

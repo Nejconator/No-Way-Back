@@ -757,11 +757,16 @@ let targetCornerIndex = 23;
 let targetCorner = cornerCordinates[targetCornerIndex];
 const MonkeySpeed = 0.05;
 let distToCorner = 10;
+let direction = "up";
+let monkeyYaw = 0;
 
 Monkey.returnNode().addComponent({
     update(){
         const MonkeyTransform = Monkey.returnNode().getComponentOfType(Transform);
-        const rotation = MonkeyTransform.rotation;
+        const Mrotation = MonkeyTransform.rotation;
+        quat.identity(Mrotation);
+        quat.rotateY(Mrotation, Mrotation, monkeyYaw);
+        
 
         const CameraPos = camera.getComponentOfType(Transform).translation;
         const vectToPlayer = [CameraPos[0] - MonkeyTransform.translation[0], CameraPos[1] - MonkeyTransform.translation[1], CameraPos[2] - MonkeyTransform.translation[2]];
@@ -796,19 +801,58 @@ Monkey.returnNode().addComponent({
             if(minAngle === Math.abs(angleToUP)){
                 targetCornerIndex = Corners[targetCornerIndex][0];
                 targetCorner = cornerCordinates[targetCornerIndex];
+                if(direction === "down"){
+                    direction = "up";
+                    monkeyYaw = Math.PI;
+                }else if(direction === "left"){
+                    direction = "up";
+                    monkeyYaw = -Math.PI;
+                }else if(direction === "right"){
+                    direction = "up";
+                    monkeyYaw = Math.PI;
+                }
 
             }else if(minAngle === Math.abs(angleToDOWN)){
                 targetCornerIndex = Corners[targetCornerIndex][1];
                 targetCorner = cornerCordinates[targetCornerIndex];
+                if(direction === "up"){
+                    direction = "down";
+                    monkeyYaw = Math.PI;
+                }else if(direction === "left"){
+                    direction = "down";
+                    monkeyYaw = Math.PI;
+                }else if(direction === "right"){
+                    direction = "down";
+                    monkeyYaw = -Math.PI;
+                }
 
             }else if(minAngle === Math.abs(angleToLEFT)){
                 targetCornerIndex = Corners[targetCornerIndex][2];
                 targetCorner = cornerCordinates[targetCornerIndex];
+                if(direction === "down"){
+                    direction = "left";
+                    monkeyYaw = -Math.PI/2;
+                }else if(direction === "up"){
+                    direction = "left";
+                    monkeyYaw = Math.PI/2;
+                }else if(direction === "right"){
+                    direction = "left";
+                    monkeyYaw = Math.PI/2;
+                }
 
             }else if(minAngle === Math.abs(angleToRIGHT)){
                 targetCornerIndex = Corners[targetCornerIndex][3];
                 targetCorner = cornerCordinates[targetCornerIndex];
-
+                if(direction === "down"){
+                    direction = "right";
+                    monkeyYaw = Math.PI/2;
+                }else if(direction === "up"){
+                    direction = "right";
+                    monkeyYaw = -Math.PI/2;
+                }else if(direction === "left"){
+                    direction = "right";
+                    monkeyYaw = Math.PI;
+                }
             }
         }
 
