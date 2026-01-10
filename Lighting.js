@@ -51,11 +51,19 @@ export function buildUniformData({ mvp, model, cameraPos, lightingState }) {
   return data;
 }
 
+export const enemyLight = {
+  pos: [0, 0, 0],
+  color: [1.0, 0.0, 0.0],
+  intensity: 3.0,
+  range: 7.0,
+};
+
 export const lightingState = {
   dir: [0.3, -1.0, 0.2],
   dirColor: [0, 0, 0],
   ambient: 0.2,
   pointLights: [
+    enemyLight,
     { pos: [0, 9.6, 0], color: [1.0, 0.75, 0.35], intensity: 1.2, range: 11 },
     { pos: [-2, 9.6, -28], color: [1.0, 0.75, 0.35], intensity: 1.2, range: 11 },
     { pos: [28, 9.6, -28], color: [1.0, 0.75, 0.35], intensity: 1.2, range: 11 },
@@ -69,7 +77,7 @@ export const lightingState = {
     { pos: [2, 9.6, 11], color: [1.0, 0.75, 0.35], intensity: 1.2, range: 11 },
     { pos: [24, 9.6, 20], color: [1.0, 0.75, 0.35], intensity: 1.2, range: 11 },
     { pos: [-16, 9.6, 28], color: [1.0, 0.75, 0.35], intensity: 1.2, range: 11 },
-    { pos: [-2, 9.6, 28], color: [1.0, 0.75, 0.35], intensity: 1.2, range: 11 },
+    //{ pos: [-2, 9.6, 28], color: [1.0, 0.75, 0.35], intensity: 1.2, range: 11 },
     { pos: [12, 9.6, 28], color: [1.0, 0.75, 0.35], intensity: 1.2, range: 11 },
     { pos: [-28, 9.6, -28], color: [1.0, 0.75, 0.35], intensity: 1.2, range: 11 },
   ],

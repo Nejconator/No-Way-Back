@@ -8,7 +8,7 @@ import { Collisions } from './Collisions.js';
 import { floorSize, walls } from './Positions.js';
 import { corners } from './corner.js';
 import { Shard } from './shard.js';
-import { UNIFORM_BYTES, buildUniformData, lightingState } from "./Lighting.js";
+import { UNIFORM_BYTES, buildUniformData, lightingState, enemyLight } from "./Lighting.js";
 import { Door } from './doors.js';
 import {
     getGlobalModelMatrix,
@@ -383,7 +383,7 @@ const lamps = [
     { pos: [2, 9.8, 11], color: [1.0, 0.75, 0.35, 1.0] },
     { pos: [24, 9.8, 20], color: [1.0, 0.75, 0.35, 1.0] },
     { pos: [-16, 9.8, 28], color: [1.0, 0.75, 0.35, 1.0] },
-    { pos: [-2, 9.8, 28], color: [1.0, 0.75, 0.35, 1.0] },
+    //{ pos: [-2, 9.8, 28], color: [1.0, 0.75, 0.35, 1.0] },
     { pos: [12, 9.8, 28], color: [1.0, 0.75, 0.35, 1.0] },
 ];
 
@@ -825,6 +825,11 @@ Monkey.returnNode().addComponent({
 
         MonkeyTransform.translation[0] += MonkeyXtravel;
         MonkeyTransform.translation[2] -= MonkeyYtravel;
+        
+        // rdeča luč za opico
+        enemyLight.pos[0] = MonkeyTransform.translation[0];
+        enemyLight.pos[1] = MonkeyTransform.translation[1] + 1;
+        enemyLight.pos[2] = MonkeyTransform.translation[2];
     }
 });
 let Srot = 0;
