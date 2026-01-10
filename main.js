@@ -8,6 +8,7 @@ import { Collisions } from './Collisions.js';
 import { floorSize, walls } from './Positions.js';
 import { corners } from './corner.js';
 import { Shard } from './shard.js';
+import { UNIFORM_BYTES, buildUniformData, lightingState } from "./Lighting.js";
 import { Door } from './doors.js';
 import {
     getGlobalModelMatrix,
@@ -170,7 +171,8 @@ let shardPositions = [
 ];
 
 const shardNum = 15;
-let shardCollected = 0;
+let shardsCollected = 0;
+const hud = document.getElementById("hud");
 
 const shards = [];
 let k=0;
@@ -195,33 +197,36 @@ const vertex = new Float32Array([
      30, 0,  30,  1,     repeatU, repeatV,  // 3 - zadaj desno
 ]);
 
-const Roof = new Float32Array([
-// positions            //texcoords         
-    -30, 10, -30,  1,     0, 0,  // 0 - spredaj levo (zelena trava)
-     30, 10, -30,  1,     repeatU, 0,  // 1 - spredaj desno
-    -30, 10,  30,  1,     0, repeatV,  // 2 - zadaj levo (temnejša)
-     30, 10,  30,  1,     repeatU, repeatV,  // 3 - zadaj desno
-]);    
+
+
+// === CEILING (strop) ===
+const CEILING_Y = 10.0; // wall.js ima zidove do y=10, zato strop na 10 (lahko 10.2 če želiš)
+
+// Uporabi isti repeat kot floor (da se tekstura tile-a)
+const ceilingVertex = new Float32Array([
+  // positions              // texcoords
+  -30, CEILING_Y, -30,  1,   0, 0,
+   30, CEILING_Y, -30,  1,   repeatU, 0,
+  -30, CEILING_Y,  30,  1,   0, repeatV,
+   30, CEILING_Y,  30,  1,   repeatU, repeatV,
+]);
+
+const ceilingVertexBuffer = device.createBuffer({
+  size: ceilingVertex.byteLength,
+  usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+});
+
+device.queue.writeBuffer(ceilingVertexBuffer, 0, ceilingVertex);
+
+
+
 
 const imageBitmap = await fetch('Red-carpet.jpg')
 .then(response => response.blob())
 .then(blob => createImageBitmap(blob));
 
-const imageBitmap2 = await fetch('roof.jpg')
-.then(response => response.blob())
-.then(blob => createImageBitmap(blob));
-
 const texture = device.createTexture({
     size: [imageBitmap.width, imageBitmap.height],
-    format: 'rgba8unorm',
-    usage:
-        GPUTextureUsage.TEXTURE_BINDING |
-        GPUTextureUsage.RENDER_ATTACHMENT |
-        GPUTextureUsage.COPY_DST,
-});
-
-const texture2 = device.createTexture({
-    size: [imageBitmap2.width, imageBitmap2.height],
     format: 'rgba8unorm',
     usage:
         GPUTextureUsage.TEXTURE_BINDING |
@@ -241,23 +246,32 @@ device.queue.copyExternalImageToTexture(
         minFilter: "linear",
     });
 
-device.queue.copyExternalImageToTexture(
-    { source: imageBitmap2 },
-    { texture: texture2 },
-    [imageBitmap2.width, imageBitmap2.height]);
-
 const vertexBuffer = device.createBuffer({
     size: vertex.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
 });
 
-const roofBuffer = device.createBuffer({
-    size: Roof.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+device.queue.writeBuffer(vertexBuffer, 0, vertex);
+
+
+// naloži ceiling bitmap (lahko je pred pipeline)
+const ceilingBitmap = await fetch('ceiling.jpg') // ali ciling.jpg
+  .then(r => r.blob())
+  .then(b => createImageBitmap(b));
+
+const ceilingTexture = device.createTexture({
+  size: [ceilingBitmap.width, ceilingBitmap.height],
+  format: 'rgba8unorm',
+  usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST,
 });
 
-device.queue.writeBuffer(vertexBuffer, 0, vertex);
-device.queue.writeBuffer(roofBuffer, 0, Roof);
+device.queue.copyExternalImageToTexture(
+  { source: ceilingBitmap },
+  { texture: ceilingTexture },
+  [ceilingBitmap.width, ceilingBitmap.height]
+);
+
+
 
 // Create index buffer
 const indices = new Uint32Array([
@@ -265,20 +279,13 @@ const indices = new Uint32Array([
     2, 1, 3,    // Drugi trikotnik
 ]);
 
-
-
 const indexBuffer = device.createBuffer({
     size: indices.byteLength,
     usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
 });
 
-const roofIndexBuffer = device.createBuffer({
-    size: indices.byteLength,
-    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-});
-
 device.queue.writeBuffer(indexBuffer, 0, indices);
-device.queue.writeBuffer(roofIndexBuffer, 0, indices);
+
 
 // Create the depth texture
 const depthTexture = device.createTexture({
@@ -322,21 +329,30 @@ const pipeline = device.createRenderPipeline({
         depthCompare: 'less',
         format: 'depth24plus',
     },
+    primitive: {
+        topology: 'triangle-list',
+        cullMode: 'none',
+    },
     layout: 'auto',
 });
+
 
 //  for ground 
 
 const uniformBuffer = device.createBuffer({
-    size: 16 * 4,
+    size: UNIFORM_BYTES,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
-const roofUniformBuffer = device.createBuffer({
-    size: 16 * 4,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+// ceiling bind group (ZDAJ je pipeline že definiran)
+const ceilingBindGroup = device.createBindGroup({
+  layout: pipeline.getBindGroupLayout(0),
+  entries: [
+    { binding: 0, resource: { buffer: uniformBuffer } },
+    { binding: 1, resource: ceilingTexture.createView() },
+    { binding: 2, resource: sampler },
+  ],
 });
-
 
 // Create the bind group for texture
 const bindGroup = device.createBindGroup({
@@ -348,23 +364,152 @@ const bindGroup = device.createBindGroup({
     ]
 });
 
-const roofBindGroup = device.createBindGroup({
-    layout: pipeline.getBindGroupLayout(0),
-    entries: [
-        { binding: 0, resource: { buffer: roofUniformBuffer } },
-        { binding: 1, resource: texture2.createView() },
-        { binding: 2, resource: sampler },
-    ]
+
+const lampSize = 0.5;            // širina/višina lampice (x,z)
+const lampHeight = 0.25;         // debelina (y)
+
+const lamps = [
+    { pos: [0, 9.8, 0], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [-28, 9.8, -28], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [-2, 9.8, -28], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [28, 9.8, -28], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [-15, 9.8, -17], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [28, 9.8, -13], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [-25, 9.8, -9], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [12, 9.8, -5], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [24, 9.8, 2], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [-22, 9.8, 11], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [-10, 9.8, 3], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [2, 9.8, 11], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [24, 9.8, 20], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [-16, 9.8, 28], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [-2, 9.8, 28], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [12, 9.8, 28], color: [1.0, 0.75, 0.35, 1.0] },
+];
+
+function createBoxMesh(device) {
+  // 24 vertexov (4 na vsako stranico), 36 indeksov
+  // Box od -0.5..0.5 po X,Z in -0.5..0.5 po Y
+  const v = new Float32Array([
+    // +Y (top)
+    -0.5,  0.5, -0.5, 1,  0,0,
+     0.5,  0.5, -0.5, 1,  1,0,
+     0.5,  0.5,  0.5, 1,  1,1,
+    -0.5,  0.5,  0.5, 1,  0,1,
+
+    // -Y (bottom)
+    -0.5, -0.5,  0.5, 1,  0,0,
+     0.5, -0.5,  0.5, 1,  1,0,
+     0.5, -0.5, -0.5, 1,  1,1,
+    -0.5, -0.5, -0.5, 1,  0,1,
+
+    // +Z (front)
+    -0.5, -0.5,  0.5, 1,  0,0,
+     0.5, -0.5,  0.5, 1,  1,0,
+     0.5,  0.5,  0.5, 1,  1,1,
+    -0.5,  0.5,  0.5, 1,  0,1,
+
+    // -Z (back)
+     0.5, -0.5, -0.5, 1,  0,0,
+    -0.5, -0.5, -0.5, 1,  1,0,
+    -0.5,  0.5, -0.5, 1,  1,1,
+     0.5,  0.5, -0.5, 1,  0,1,
+
+    // +X (right)
+     0.5, -0.5,  0.5, 1,  0,0,
+     0.5, -0.5, -0.5, 1,  1,0,
+     0.5,  0.5, -0.5, 1,  1,1,
+     0.5,  0.5,  0.5, 1,  0,1,
+
+    // -X (left)
+    -0.5, -0.5, -0.5, 1,  0,0,
+    -0.5, -0.5,  0.5, 1,  1,0,
+    -0.5,  0.5,  0.5, 1,  1,1,
+    -0.5,  0.5, -0.5, 1,  0,1,
+  ]);
+
+  const idx = new Uint16Array([
+    0,1,2,  0,2,3,        // top
+    4,5,6,  4,6,7,        // bottom
+    8,9,10, 8,10,11,      // front
+    12,13,14, 12,14,15,   // back
+    16,17,18, 16,18,19,   // right
+    20,21,22, 20,22,23,   // left
+  ]);
+
+  const vertexBuffer = device.createBuffer({
+    size: v.byteLength,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    mappedAtCreation: true,
+  });
+  new Float32Array(vertexBuffer.getMappedRange()).set(v);
+  vertexBuffer.unmap();
+
+  const indexBuffer = device.createBuffer({
+    size: idx.byteLength,
+    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    mappedAtCreation: true,
+  });
+  new Uint16Array(indexBuffer.getMappedRange()).set(idx);
+  indexBuffer.unmap();
+
+  return { vertexBuffer, indexBuffer, indexCount: idx.length };
+}
+const lampMesh = createBoxMesh(device);
+
+const lampCode = await fetch("lampShader.wgsl").then(r => r.text());
+const lampModule = device.createShaderModule({ code: lampCode });
+
+const lampPipeline = device.createRenderPipeline({
+  layout: "auto",
+  vertex: {
+    module: lampModule,
+    entryPoint: "vertex",
+    buffers: [{
+      arrayStride: 6 * 4, // x,y,z,w,u,v (uv je sicer ignoriran)
+      attributes: [
+        { shaderLocation: 0, offset: 0, format: "float32x4" },
+      ],
+    }],
+  },
+  fragment: {
+    module: lampModule,
+    entryPoint: "fragment",
+    targets: [{ format }],
+  },
+  primitive: {
+    topology: "triangle-list",
+    cullMode: "none",
+  },
+  depthStencil: {
+    depthWriteEnabled: true,
+    depthCompare: "less",
+    format: "depth24plus",
+  },
 });
+
+// Uniform: mat4 (64) + vec4 (16) = 80 bajtov
+const lampUniformBuffers = lamps.map(() =>
+  device.createBuffer({
+    size: 80,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  })
+);
+
+const lampBindGroups = lampUniformBuffers.map(buf =>
+  device.createBindGroup({
+    layout: lampPipeline.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer: buf } }],
+  })
+);
+
+
 
 // Create the scene
 
 
 const ground = new Node();
 ground.addComponent(new Transform());  // Ground is at origin
-
-const roof = new Node();
-roof.addComponent(new Transform());
 
 const camera = new Node();
 camera.addComponent(new Camera({
@@ -386,10 +531,11 @@ const wall4 = new Wall(device, pipeline, camera, [-15, 0, 0], 1, 15);
 
 const Monkey = new monkey(device,pipeline,camera, [2,5,20]);
 
-const shard = new Shard(device, pipeline, camera, [0,2.5,6.5]);
+const shard = new Shard(device, pipeline, camera, [0,2.5,6]);
 
 const door = new Door(device, pipeline, camera, [-0.75,0,4]);
 const door2 = new Door(device, pipeline, camera, [0.75,0,4]);
+
 
 const shrdArray = [];
 for (let k = 0; k < shards.length; k++) {
@@ -408,7 +554,6 @@ for (const w of walls) {
     }
     i++;
 }
-
 
 
 // računaš točo eno mersko enoto pred tabo v smeri kamere
@@ -504,11 +649,9 @@ camera.addComponent({
         // računa kot za koliko je kamera rotirana glede na začetno smer
         let angleBetween = AngleBetweenVectors(vectorCameraToRef, vectorCameraToForward);
         //console.log("Angle: " + angleBetween*(180/Math.PI));
-
-
+        
         const vTd = [vecCamera[0] , 0, vecCamera[2] - 4];
         const distT = VectLenght(vTd);
-        
 
         //za forward in backward
         let Xtravel = Math.sin(angleBetween)*(cameraSpeed);
@@ -523,7 +666,7 @@ camera.addComponent({
         if (angleBetween*(180/Math.PI) < 0) {
             Ysideways = -Ysideways;
         }
-
+        
         
         if(distT < 6 && vecCamera[2] < 4 && vecCamera[2] > 3  && (dooropened === false)){
             console.log("not pass");
@@ -532,8 +675,8 @@ camera.addComponent({
                 Ysideways = 0;
             }
         }
-
         
+
         let velocityFactor = 0.025
         
 
@@ -626,7 +769,9 @@ Monkey.returnNode().addComponent({
 
         const pointUP = [MonkeyTransform.translation[0], MonkeyTransform.translation[1], MonkeyTransform.translation[2]-5];
         const vectUP = [pointUP[0] - MonkeyTransform.translation[0], pointUP[1] - MonkeyTransform.translation[1], pointUP[2] - MonkeyTransform.translation[2]];
-
+        if (distToPlyr<2){
+            window.showLoseScreen();
+        }
         if(distToCorner<=0.05){
             
             const pointDOWN = [MonkeyTransform.translation[0], MonkeyTransform.translation[1], MonkeyTransform.translation[2]+5];
@@ -671,8 +816,8 @@ Monkey.returnNode().addComponent({
         distToCorner = VectLenght(vectToCorner);
 
         let angleToCorner = AngleBetweenVectors(vectToCorner, vectUP);
-        //console.log("pos: x:" + MonkeyTransform.translation[0] + " z:" + MonkeyTransform.translation[1] + " y:" + MonkeyTransform.translation[2]);
-        //console.log("dist to corner: " + distToCorner + " corner index: " + targetCornerIndex);
+        console.log("pos: x:" + MonkeyTransform.translation[0] + " z:" + MonkeyTransform.translation[1] + " y:" + MonkeyTransform.translation[2]);
+        console.log("dist to corner: " + distToCorner + " corner index: " + targetCornerIndex);
 
         let MonkeyXtravel = Math.sin(angleToCorner)*(MonkeySpeed);
         let MonkeyYtravel = Math.cos(angleToCorner)*(MonkeySpeed); 
@@ -682,7 +827,6 @@ Monkey.returnNode().addComponent({
         MonkeyTransform.translation[2] -= MonkeyYtravel;
     }
 });
-
 let Srot = 0;
 for (let k = 0; k < shrdArray.length; k++) {
     shrdArray[k].returnNode().addComponent({
@@ -698,14 +842,31 @@ for (let k = 0; k < shrdArray.length; k++) {
             quat.identity(ShardRotation);
             quat.rotateY(ShardRotation, ShardRotation, Srot+=0.001);
 
-            if(distToPlyr2 < 2 ){
+            if(distToPlyr2 < 2){
                 shards[k][1] = false;
-                shardCollected++;
-                console.log("Shard collected: " + shardCollected + "/" + shardNum);
+                shardsCollected++;
+                if (hud) hud.textContent = `Shards: ${shardsCollected}/${shardNum}`;
+                if (shardsCollected === shardNum) {
+                    if (hud) hud.textContent = `Shards: ${shardsCollected}/${shardNum}  Go to the doors!`;
+                    //window.showWinScreen(); 
+                }
             }
         }
     });
 }
+
+shard.returnNode().addComponent({
+    update(){
+        const ShardTransform4 = shard.returnNode().getComponentOfType(Transform).translation;
+        const CameraPos4 = camera.getComponentOfType(Transform).translation;
+        const vectToPlayer4 = [CameraPos4[0] - ShardTransform4[0], 0, CameraPos4[2] - ShardTransform4[2]];
+        const distToPlyr4 = VectLenght(vectToPlayer4);
+
+        if(distToPlyr4 < 2){
+            window.showWinScreen();
+        }
+    }
+});
 
 let doorOpen = false;
 
@@ -716,9 +877,9 @@ door.returnNode().addComponent({
         const vectToPlayer3 = [CameraPos3[0] - doorTransform[0], 0, CameraPos3[2] - doorTransform[2]];
         const distToPlyr3 = VectLenght(vectToPlayer3);
 
-        if(distToPlyr3 < 5 && shardCollected === shardNum && (keysPressed['e'] || keysPressed['E'])){  
+        if(distToPlyr3 < 5 && shardsCollected === shardNum && (keysPressed['e'] || keysPressed['E'])){
             doorOpen = true;
-            collisions.removeWall(meta => meta?.type === 'door');
+            collisions.removeWall(meta => meta.type === 'door-wall');
         }
         if(doorTransform[0] > -2.25 && doorOpen === true){
             doorTransform[0] -= 0.01;
@@ -736,9 +897,9 @@ door2.returnNode().addComponent({
         const vectToPlayer4 = [CameraPos4[0] - door2Transform[0], 0, CameraPos4[2] - door2Transform[2]];
         const distToPlyr4 = VectLenght(vectToPlayer4);
 
-        if(distToPlyr4 < 5 && shardCollected === shardNum && (keysPressed['e'] || keysPressed['E'])){  
+        if(distToPlyr4 < 5 && shardsCollected === shardNum && (keysPressed['e'] || keysPressed['E'])){
             doorOpen = true;
-            collisions.removeWall(meta => meta?.type === 'door');
+            collisions.removeWall(meta => meta.type === 'door-wall');
         }
         if(door2Transform[0] < 2.25 && doorOpen === true){
             door2Transform[0] += 0.01;
@@ -748,8 +909,6 @@ door2.returnNode().addComponent({
         }
     }
 });
-
-
 
 window.addEventListener('keydown', (e) => {
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
@@ -808,13 +967,21 @@ function render() {
     const projectionMatrix = getProjectionMatrix(camera);
 
     // Upload the transformation matrix
-    const matrix = mat4.create()
+    const mvp = mat4.create()
         .multiply(projectionMatrix)
         .multiply(viewMatrix)
         .multiply(modelMatrix);
 
-    device.queue.writeBuffer(uniformBuffer, 0, matrix);
-    device.queue.writeBuffer(roofUniformBuffer, 0, matrix);
+    const cameraPos = camera.getComponentOfType(Transform).translation;
+
+    const uniformData = buildUniformData({
+      mvp,
+      model: modelMatrix,
+      cameraPos,
+      lightingState
+    });
+
+    device.queue.writeBuffer(uniformBuffer, 0, uniformData);
 
     /*
     wall1.updateRender();
@@ -824,10 +991,12 @@ function render() {
     */
 
     Monkey.updateRender();
+
     shard.updateRender();
+    
     door.updateRender();
     door2.updateRender();
-
+    
     for (let k=0; k<shrdArray.length; k++) {
         if(shards[k][1] === true){
             shrdArray[k].updateRender();
@@ -860,11 +1029,12 @@ function render() {
     renderPass.setIndexBuffer(indexBuffer, 'uint32');
     renderPass.setBindGroup(0, bindGroup);
     renderPass.drawIndexed(indices.length);
-
-    renderPass.setVertexBuffer(0, roofBuffer);
-    renderPass.setIndexBuffer(roofIndexBuffer, 'uint32');
-    renderPass.setBindGroup(0, roofBindGroup);
+    // === DRAW CEILING ===
+    renderPass.setVertexBuffer(0, ceilingVertexBuffer);
+    renderPass.setBindGroup(0, ceilingBindGroup);
     renderPass.drawIndexed(indices.length);
+
+
     
     /*
     wall1.draw(renderPass);
@@ -873,7 +1043,9 @@ function render() {
     wall4.draw(renderPass);
     */
     Monkey.draw(renderPass);
+
     shard.draw(renderPass);
+    
     door.draw(renderPass);
     door2.draw(renderPass);
     
@@ -887,8 +1059,36 @@ function render() {
         }
     }
     
+    for (let i = 0; i < lamps.length; i++) {
+        const L = lamps[i];
+
+        const model = mat4.create()
+            .translate(L.pos)
+            .scale([lampSize, lampHeight, lampSize]);
+
+        const mvp = mat4.create()
+            .multiply(projectionMatrix)
+            .multiply(viewMatrix)
+            .multiply(model);
+
+        const u = new Float32Array(20);
+        u.set(mvp, 0);
+        u.set(L.color, 16);
+
+        device.queue.writeBuffer(lampUniformBuffers[i], 0, u);
+
+        renderPass.setPipeline(lampPipeline);
+        renderPass.setBindGroup(0, lampBindGroups[i]);
+        renderPass.setVertexBuffer(0, lampMesh.vertexBuffer);
+        renderPass.setIndexBuffer(lampMesh.indexBuffer, "uint16");
+        renderPass.drawIndexed(lampMesh.indexCount);
+    }
+
+
     renderPass.end();
     device.queue.submit([commandEncoder.finish()]);
+
+    
 }
 
 const wallColliders = [
@@ -917,9 +1117,29 @@ const wallColliders = [
         size: [60, 25, 1], 
         meta: { type: 'wall' } 
     },
-    
-];
 
+
+    { 
+        // This is wall 39 from Positions.js: { pos: [0, 0, 4], size: [8, 25, 1], rotation: 0 }
+        node: { translation: [0, 0, 4] }, 
+        size: [8, 25, 1], 
+        meta: { type: 'door-wall' } // Add this label
+    },
+
+    // ADD THESE: The physical boxes for the doors
+    // Because we use door.node, the collision moves with your animation!
+    { 
+        node: door.node, 
+        size: [1.5, 9, 0.4], 
+        meta: { type: 'door-panel' } 
+    },
+
+    { 
+        node: door2.node, 
+        size: [1.5, 9, 0.4], 
+        meta: { type: 'door-panel' } 
+    }
+];  
 
 for (const w of walls) {
     wallColliders.push({
@@ -928,14 +1148,13 @@ for (const w of walls) {
         meta: { type: "wall" }
     });
 }
+  
 
 const collisions = new Collisions({
     playerNode: camera,
-    playerSize: [1, 6, 1],   
+    playerSize: [1, 6, 1],
     wallColliders
 });
-  
-
 
 
 function frame() {

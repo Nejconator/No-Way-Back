@@ -2,6 +2,7 @@ import { quat, mat4 } from './glm.js';
 import { Transform } from './Transform.js';
 import { Camera } from './Camera.js';
 import { Node } from './Node.js';
+import { UNIFORM_BYTES, buildUniformData, lightingState } from "./Lighting.js";
 import {
     getGlobalModelMatrix,
     getGlobalViewMatrix,
@@ -266,23 +267,24 @@ export class Wall {
         this.edgePlankIndexCount = edgePlankIndices.length;
         this.secEdgePlankIndexCount = secEdgePlankIndices.length;
 
+
         this.wallUniformBuffer = device.createBuffer({
-            size: 16 * 4,
+            size: UNIFORM_BYTES,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
         this.plankUniformBuffer = device.createBuffer({
-            size: 16 * 4,
+            size: UNIFORM_BYTES,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
         this.edgePlankUniformBuffer = device.createBuffer({
-            size: 16 * 4,
+            size: UNIFORM_BYTES,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
         this.secEdgePlankUniformBuffer = device.createBuffer({
-            size: 16 * 4,
+            size: UNIFORM_BYTES,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
         
@@ -333,15 +335,23 @@ export class Wall {
         const view = getGlobalViewMatrix(this.camera);
         const proj = getProjectionMatrix(this.camera);
 
-        const matrix = mat4.create()
+        const mvp = mat4.create()
             .multiply(proj)
             .multiply(view)
             .multiply(model);
+        
+        const cameraPos = this.camera.getComponentOfType(Transform).translation;
+        const uniformData = buildUniformData({
+          mvp,
+          model,
+          cameraPos,
+          lightingState,
+        });
 
-        this.device.queue.writeBuffer(this.wallUniformBuffer, 0, matrix);
-        this.device.queue.writeBuffer(this.plankUniformBuffer, 0, matrix);
-        this.device.queue.writeBuffer(this.edgePlankUniformBuffer, 0, matrix);
-        this.device.queue.writeBuffer(this.secEdgePlankUniformBuffer, 0, matrix);
+        this.device.queue.writeBuffer(this.wallUniformBuffer, 0, uniformData);
+        this.device.queue.writeBuffer(this.plankUniformBuffer, 0, uniformData);
+        this.device.queue.writeBuffer(this.edgePlankUniformBuffer, 0, uniformData);
+        this.device.queue.writeBuffer(this.secEdgePlankUniformBuffer, 0, uniformData);
 
     }
 

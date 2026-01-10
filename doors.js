@@ -7,6 +7,7 @@ import {
     getGlobalViewMatrix,
     getProjectionMatrix,
 } from './SceneUtils.js';
+import { UNIFORM_BYTES, buildUniformData, lightingState } from "./Lighting.js";
 
 
 export class Door {
@@ -117,7 +118,7 @@ export class Door {
 
         
         this.doorUniformBuffer = device.createBuffer({
-            size: 16 * 4,
+            size: UNIFORM_BYTES,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
@@ -143,13 +144,24 @@ export class Door {
         const view = getGlobalViewMatrix(this.camera);
         const proj = getProjectionMatrix(this.camera);
 
-        const matrix = mat4.create()
+        const mvp = mat4.create()
             .multiply(proj)
             .multiply(view)
             .multiply(model);
 
-        this.device.queue.writeBuffer(this.doorUniformBuffer, 0, matrix);
+        // We need the camera position for the lighting calculations in the shader
+        const cameraPos = this.camera.getComponentOfType(Transform).translation;
 
+        // Build the full uniform structure required by shader.wgsl
+        const uniformData = buildUniformData({
+          mvp,
+          model,
+          cameraPos,
+          lightingState,
+        });
+
+        // Write the full data packet to the buffer
+        this.device.queue.writeBuffer(this.doorUniformBuffer, 0, uniformData);
     }
 
     draw(renderPass) {

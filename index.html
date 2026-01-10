@@ -8,17 +8,151 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
+            background-color: #000;
+            font-family: 'Impact', 'Arial Black', sans-serif;
         }
 
+        /* --- Game Elements --- */
         canvas {
             width: 100vw;
             height: 100vh;
-            display: block;
+            display: none; 
         }
+
+        #hud {
+            position: fixed;
+            left: 12px;
+            top: 12px;
+            z-index: 10;
+            color: white;
+            font: 30px Impact;
+            text-shadow: 0 2px 4px black;
+            display: none;
+        }
+
+        /* --- Screens Base Styling --- */
+        .overlay-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: none; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            text-align: center;
+            background-size: cover;
+        }
+
+        .overlay-screen h1 {
+            font-size: 80px;
+            margin-bottom: 20px;
+            letter-spacing: 5px;
+        }
+
+        .btn {
+            padding: 15px 50px;
+            font-size: 24px;
+            font-family: 'Impact', sans-serif;
+            cursor: pointer;
+            text-transform: uppercase;
+            border: 2px solid;
+            transition: 0.3s;
+            margin-top: 20px;
+        }
+
+        /* --- Start Screen (Red/Dark Theme) --- */
+        #start-screen {
+            display: flex;
+            background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('wall_texture.jpg');
+            color: white;
+        }
+        #start-screen h1 { color: #cc0000; text-shadow: 0 0 20px rgba(255,0,0,0.5); }
+        #start-button { background: #8b0000; color: white; border-color: #ff0000; }
+        #start-button:hover { background: #ff0000; box-shadow: 0 0 20px #ff0000; }
+
+        /* --- Win Screen (Green Theme) --- */
+        #win-screen {
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ff00;
+            z-index: 200;
+        }
+        #win-screen h1 { text-shadow: 0 0 30px #00ff00; }
+        #restart-win { background: #004400; color: #00ff00; border-color: #00ff00; }
+        #restart-win:hover { background: #00ff00; color: black; }
+
+        /* --- Lose Screen (Red Theme) --- */
+        #lose-screen {
+            background: rgba(0, 0, 0, 0.9);
+            color: #ff0000;
+            z-index: 200;
+        }
+        #lose-screen h1 { text-shadow: 0 0 30px #ff0000; }
+        #restart-lose { background: #440000; color: #ff0000; border-color: #ff0000; }
+        #restart-lose:hover { background: #ff0000; color: black; }
+
     </style>
-    <script type="module" src="main.js"></script>
 </head>
 <body>
+
+    <div id="start-screen" class="overlay-screen">
+        <h1>NO WAY BACK</h1>
+        <button id="start-button" class="btn">Start Game</button>
+    </div>
+
+    <div id="win-screen" class="overlay-screen">
+        <h1>YOU ESCAPED</h1>
+        <p style="font-size: 24px;">All shards collected.</p>
+        <button id="restart-win" class="btn" onclick="location.reload()">Play Again</button>
+    </div>
+
+    <div id="lose-screen" class="overlay-screen">
+        <h1>GAME OVER</h1>
+        <p style="font-size: 24px;">You did not survive.</p>
+        <button id="restart-lose" class="btn" onclick="location.reload()">Try Again</button>
+    </div>
+
+    <div id="hud">
+        Shards: 0/0
+    </div>
+
     <canvas></canvas>
+
+    <script type="module">
+        const startScreen = document.getElementById('start-screen');
+        const startButton = document.getElementById('start-button');
+        const winScreen = document.getElementById('win-screen');
+        const loseScreen = document.getElementById('lose-screen');
+        const canvas = document.querySelector('canvas');
+        const hud = document.getElementById('hud');
+
+        // Logic to trigger the Win Screen
+        window.showWinScreen = () => {
+            winScreen.style.display = 'flex';
+            hud.style.display = 'none';
+            document.exitPointerLock?.(); 
+        };
+
+        // Logic to trigger the Lose Screen
+        window.showLoseScreen = () => {
+            loseScreen.style.display = 'flex';
+            hud.style.display = 'none';
+            document.exitPointerLock?.();
+        };
+
+        startButton.addEventListener('click', async () => {
+            startScreen.style.display = 'none';
+            canvas.style.display = 'block';
+            hud.style.display = 'block';
+
+            try {
+                await import('./main.js');
+            } catch (err) {
+                console.error("Error loading main.js:", err);
+            }
+        });
+    </script>
 </body>
 </html>

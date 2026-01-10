@@ -2,6 +2,7 @@ import { quat, mat4 } from './glm.js';
 import { Transform } from './Transform.js';
 import { Camera } from './Camera.js';
 import { Node } from './Node.js';
+import { UNIFORM_BYTES, buildUniformData, lightingState } from "./Lighting.js";
 import {
     getGlobalModelMatrix,
     getGlobalViewMatrix,
@@ -106,8 +107,9 @@ export class Shard {
 
         this.indexCount = shardIndices.length;
 
+
         this.shardUniformBuffer = device.createBuffer({
-            size: 16 * 4,
+            size: UNIFORM_BYTES,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
@@ -133,12 +135,21 @@ export class Shard {
         const view = getGlobalViewMatrix(this.camera);
         const proj = getProjectionMatrix(this.camera);
 
-        const matrix = mat4.create()
+        const mvp = mat4.create()
             .multiply(proj)
             .multiply(view)
             .multiply(model);
 
-        this.device.queue.writeBuffer(this.shardUniformBuffer, 0, matrix);
+        const cameraPos = this.camera.getComponentOfType(Transform).translation;
+
+        const uniformData = buildUniformData({
+          mvp,
+          model,
+          cameraPos,
+          lightingState,
+        });
+
+        this.device.queue.writeBuffer(this.shardUniformBuffer, 0, uniformData);
 
     }
 
