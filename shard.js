@@ -25,7 +25,7 @@ export class Shard {
     }
 
 
-    constructor(device, pipeline, camera, position) { // rotation 0 = along x axis, 1 = along y axis
+    constructor(device, pipeline, camera, position) { // rotation 0 = x, 1 = y 
 
         this.device = device;
         this.pipeline = pipeline;

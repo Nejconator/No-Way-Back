@@ -129,14 +129,12 @@
         const canvas = document.querySelector('canvas');
         const hud = document.getElementById('hud');
 
-        // Logic to trigger the Win Screen
         window.showWinScreen = () => {
             winScreen.style.display = 'flex';
             hud.style.display = 'none';
             document.exitPointerLock?.(); 
         };
 
-        // Logic to trigger the Lose Screen
         window.showLoseScreen = () => {
             loseScreen.style.display = 'flex';
             hud.style.display = 'none';

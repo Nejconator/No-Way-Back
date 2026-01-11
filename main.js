@@ -8,7 +8,7 @@ import { Collisions } from './Collisions.js';
 import { floorSize, walls } from './Positions.js';
 import { corners } from './corner.js';
 import { Shard } from './shard.js';
-import { UNIFORM_BYTES, buildUniformData, lightingState, enemyLight } from "./Lighting.js";
+import { UNIFORM_BYTES, buildUniformData, lightingState, enemyLight, enemyLight2 } from "./Lighting.js";
 import { Door } from './doors.js';
 import { Minimap } from './Minimap.js';
 import {
@@ -19,7 +19,6 @@ import {
 
 
 
-// Initialize WebGPU
 const adapter = await navigator.gpu.requestAdapter();
 const device = await adapter.requestDevice();
 const canvas = document.querySelector('canvas');
@@ -37,7 +36,7 @@ await monkey.loadTexture(device);
 await Shard.loadTexture(device);
 await Door.loadTexture(device);
 
-// shard pickup sound
+
 const shardPickupSfx = new Audio("./sounds/shardSound.wav");
 shardPickupSfx.volume = 0.2;
 shardPickupSfx.preload = "auto";
@@ -60,7 +59,7 @@ function playShardPickupSfx() {
   shardPickupSfx.play().catch(() => {});
 }
 
-// player death sound
+// death sound
 let gameOver = false;
 const dyingSfx = new Audio("./sounds/dyingSound.wav");
 dyingSfx.volume = 0.2;
@@ -73,7 +72,7 @@ function playDyingSfx() {
 
 const bgVolume = 0.15;
 //  background music
-let bgMusic = new Audio("./sounds/backgroundSound.mp3");
+let bgMusic = new Audio("./sounds/murder-monkeys.mp3");
 bgMusic.loop = true;
 bgMusic.volume = 0;
 bgMusic.preload = "auto";
@@ -248,19 +247,18 @@ while(k<shardNum){
 const repeatU = 30 / 2.5 ;
 const repeatV = 30 / 2.5 ;
 
-// Create vertex buffer
-const vertex = new Float32Array([
-// positions            //texcoords         
-    -30, 0, -30,  1,     0, 0,  // 0 - spredaj levo (zelena trava)
+
+const vertex = new Float32Array([        
+    -30, 0, -30,  1,     0, 0,  // 0 - spredaj levo 
      30, 0, -30,  1,     repeatU, 0,  // 1 - spredaj desno
-    -30, 0,  30,  1,     0, repeatV,  // 2 - zadaj levo (temnejša)
+    -30, 0,  30,  1,     0, repeatV,  // 2 - zadaj levo 
      30, 0,  30,  1,     repeatU, repeatV,  // 3 - zadaj desno
 ]);
 
 
 
 
-const CEILING_Y = 10.0; // wall.js ima zidove do y=10, zato strop na 10 
+const CEILING_Y = 10.0; 
 
 
 const ceilingVertex = new Float32Array([
@@ -283,10 +281,7 @@ const plank = new Float32Array([
 ]);
 // 
 //
-const plankIndices = new Uint32Array([
-    0,1,2,
-    0,3,2,
-]);
+
 
 const ceilingVertexBuffer = device.createBuffer({
   size: ceilingVertex.byteLength,
@@ -356,13 +351,16 @@ device.queue.copyExternalImageToTexture(
 
 
 
-// Create index buffer
+// index buffer
 const indices = new Uint32Array([
-    0, 1, 2,    // Prvi trikotnik
-    2, 1, 3,    // Drugi trikotnik
+    0, 1, 2,    
+    2, 1, 3,    
 ]);
 
-
+const plankIndices = new Uint32Array([
+    0,1,2,
+    0,3,2,
+]);
 
 const plankIndexBuffer = device.createBuffer({
     size: plankIndices.byteLength,
@@ -379,18 +377,18 @@ device.queue.writeBuffer(plankIndexBuffer, 0, plankIndices);
 
 const plankIndexCount = plankIndices.length;
 
-// Create the depth texture
+
 const depthTexture = device.createTexture({
     size: [canvas.width, canvas.height],
     format: 'depth24plus',
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-// Fetch and compile shaders
+
 const code = await fetch('shader.wgsl').then(response => response.text());
 const module = device.createShaderModule({ code });
 
-// Create the pipeline
+
 const vertexBufferLayout = {
     arrayStride: 24,
      attributes: [
@@ -429,7 +427,7 @@ const pipeline = device.createRenderPipeline({
 });
 
 
-//  for ground 
+//  za ground 
 
 const uniformBuffer = device.createBuffer({
     size: UNIFORM_BYTES,
@@ -441,7 +439,6 @@ const plankUniformBuffer = device.createBuffer({
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
-// ceiling bind group (ZDAJ je pipeline že definiran)
 const ceilingBindGroup = device.createBindGroup({
   layout: pipeline.getBindGroupLayout(0),
   entries: [
@@ -451,7 +448,7 @@ const ceilingBindGroup = device.createBindGroup({
   ],
 });
 
-// Create the bind group for texture
+// bind group za texture
 const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
     entries: [
@@ -487,47 +484,39 @@ const lamps = [
     { pos: [-22, 9.8, 11], color: [1.0, 0.75, 0.35, 1.0] },
     { pos: [-10, 9.8, 3], color: [1.0, 0.75, 0.35, 1.0] },
     { pos: [2, 9.8, 11], color: [1.0, 0.75, 0.35, 1.0] },
-    { pos: [24, 9.8, 20], color: [1.0, 0.75, 0.35, 1.0] },
+    { pos: [12, 9.8, 20], color: [1.0, 0.75, 0.35, 1.0] },
     { pos: [-16, 9.8, 28], color: [1.0, 0.75, 0.35, 1.0] },
     //{ pos: [-2, 9.8, 28], color: [1.0, 0.75, 0.35, 1.0] },
-    { pos: [12, 9.8, 28], color: [1.0, 0.75, 0.35, 1.0] },
+    //{ pos: [12, 9.8, 28], color: [1.0, 0.75, 0.35, 1.0] },
 ];
 
 function createBoxMesh(device) {
-  // 24 vertexov (4 na vsako stranico), 36 indeksov
-  // Box od -0.5..0.5 po X,Z in -0.5..0.5 po Y
   const v = new Float32Array([
-    // +Y (top)
     -0.5,  0.5, -0.5, 1,  0,0,
      0.5,  0.5, -0.5, 1,  1,0,
      0.5,  0.5,  0.5, 1,  1,1,
     -0.5,  0.5,  0.5, 1,  0,1,
 
-    // -Y (bottom)
     -0.5, -0.5,  0.5, 1,  0,0,
      0.5, -0.5,  0.5, 1,  1,0,
      0.5, -0.5, -0.5, 1,  1,1,
     -0.5, -0.5, -0.5, 1,  0,1,
 
-    // +Z (front)
     -0.5, -0.5,  0.5, 1,  0,0,
      0.5, -0.5,  0.5, 1,  1,0,
      0.5,  0.5,  0.5, 1,  1,1,
     -0.5,  0.5,  0.5, 1,  0,1,
 
-    // -Z (back)
      0.5, -0.5, -0.5, 1,  0,0,
     -0.5, -0.5, -0.5, 1,  1,0,
     -0.5,  0.5, -0.5, 1,  1,1,
      0.5,  0.5, -0.5, 1,  0,1,
 
-    // +X (right)
      0.5, -0.5,  0.5, 1,  0,0,
      0.5, -0.5, -0.5, 1,  1,0,
      0.5,  0.5, -0.5, 1,  1,1,
      0.5,  0.5,  0.5, 1,  0,1,
 
-    // -X (left)
     -0.5, -0.5, -0.5, 1,  0,0,
     -0.5, -0.5,  0.5, 1,  1,0,
     -0.5,  0.5,  0.5, 1,  1,1,
@@ -636,6 +625,7 @@ const wall4 = new Wall(device, pipeline, camera, [-15, 0, 0], 1, 15);
 */
 
 const Monkey = new monkey(device,pipeline,camera, [2,5,20]);
+const Monkey2 = new monkey(device,pipeline,camera, [-28,5,-9]);
 
 const shard = new Shard(device, pipeline, camera, [0,2.5,6]);
 
@@ -652,7 +642,7 @@ const minimap = new Minimap({
     playerNode: camera, 
     worldSize: floorSize,
     walls: walls,
-    monkeys: [Monkey],
+    monkeys: [Monkey, Monkey2],
     shards: [shard, ...shrdArray] 
 });
 
@@ -670,7 +660,7 @@ for (const w of walls) {
 }
 
 
-// toča eno mersko enoto pred tabo v smeri kamere
+// točka eno mersko enoto pred kamereo
 function getForwardVector(camera) {
     const world = getGlobalModelMatrix(camera);
     
@@ -877,7 +867,7 @@ Monkey.returnNode().addComponent({
         const CameraPos = camera.getComponentOfType(Transform).translation;
         const vectToPlayer = [CameraPos[0] - MonkeyTransform.translation[0], CameraPos[1] - MonkeyTransform.translation[1], CameraPos[2] - MonkeyTransform.translation[2]];
         const distToPlyr = VectLenght(vectToPlayer);
-        const mindist = 15;
+        const mindist = 12;
         if(distToPlyr <= mindist){
             bgMusic.volume = bgVolume/mindist * (mindist-distToPlyr);
         }
@@ -965,7 +955,7 @@ Monkey.returnNode().addComponent({
                     monkeyYaw = -Math.PI/2;
                 }else if(direction === "left"){
                     direction = "right";
-                    monkeyYaw = Math.PI;
+                    monkeyYaw = Math.PI/2;
                 }
             }
         }
@@ -974,8 +964,8 @@ Monkey.returnNode().addComponent({
         distToCorner = VectLenght(vectToCorner);
 
         let angleToCorner = AngleBetweenVectors(vectToCorner, vectUP);
-        console.log("pos: x:" + MonkeyTransform.translation[0] + " z:" + MonkeyTransform.translation[1] + " y:" + MonkeyTransform.translation[2]);
-        console.log("dist to corner: " + distToCorner + " corner index: " + targetCornerIndex);
+        //console.log("pos: x:" + MonkeyTransform.translation[0] + " z:" + MonkeyTransform.translation[1] + " y:" + MonkeyTransform.translation[2]);
+        //console.log("dist to corner: " + distToCorner + " corner index: " + targetCornerIndex);
 
         let MonkeyXtravel = Math.sin(angleToCorner)*(MonkeySpeed);
         let MonkeyYtravel = Math.cos(angleToCorner)*(MonkeySpeed); 
@@ -988,6 +978,139 @@ Monkey.returnNode().addComponent({
         enemyLight.pos[0] = MonkeyTransform.translation[0];
         enemyLight.pos[1] = MonkeyTransform.translation[1] + 1;
         enemyLight.pos[2] = MonkeyTransform.translation[2];
+    }
+});
+
+let targetCornerIndex2 = 8;
+let targetCorner2 = cornerCordinates[targetCornerIndex2];
+let distToCorner2 = 10;
+const MonkeySpeed2 = 0.065;
+let direction2 = "up";
+let monkeyYaw2 = 0;
+
+Monkey2.returnNode().addComponent({
+    update(){
+        const MonkeyTransform2 = Monkey2.returnNode().getComponentOfType(Transform);
+        const Mrotation2 = MonkeyTransform2.rotation;
+        quat.identity(Mrotation2);
+        quat.rotateY(Mrotation2, Mrotation2, monkeyYaw2);
+        
+
+        const CameraPos2 = camera.getComponentOfType(Transform).translation;
+        const vectToPlayer9 = [CameraPos2[0] - MonkeyTransform2.translation[0], CameraPos2[1] - MonkeyTransform2.translation[1], CameraPos2[2] - MonkeyTransform2.translation[2]];
+        const distToPlyrM = VectLenght(vectToPlayer9);
+        const mindist2 = 12;
+        if(distToPlyrM <= mindist2){
+            bgMusic.volume = bgVolume/mindist2 * (mindist2-distToPlyrM);
+        }
+
+        const pointUP2 = [MonkeyTransform2.translation[0], MonkeyTransform2.translation[1], MonkeyTransform2.translation[2]-5];
+        const vectUP2 = [pointUP2[0] - MonkeyTransform2.translation[0], pointUP2[1] - MonkeyTransform2.translation[1], pointUP2[2] - MonkeyTransform2.translation[2]];
+        if (distToPlyrM<2 && !gameOver){
+            gameOver = true;
+            bgMusic.pause();
+            bgMusic.currentTime = 0;
+            playDyingSfx();
+            window.showLoseScreen();
+        }
+        if(distToCorner2<=0.05){
+            
+            const pointDOWN2 = [MonkeyTransform2.translation[0], MonkeyTransform2.translation[1], MonkeyTransform2.translation[2]+5];
+            const pointLEFT2 = [MonkeyTransform2.translation[0]-5, MonkeyTransform2.translation[1], MonkeyTransform2.translation[2]];
+            const pointRIGHT2 = [MonkeyTransform2.translation[0]+5, MonkeyTransform2.translation[1], MonkeyTransform2.translation[2]];
+            const vectDOWN2 = [pointDOWN2[0] - MonkeyTransform2.translation[0], pointDOWN2[1] - MonkeyTransform2.translation[1], pointDOWN2[2] - MonkeyTransform2.translation[2]];
+            const vectLEFT2 = [pointLEFT2[0] - MonkeyTransform2.translation[0], pointLEFT2[1] - MonkeyTransform2.translation[1], pointLEFT2[2] - MonkeyTransform2.translation[2]];
+            const vectRIGHT2 = [pointRIGHT2[0] - MonkeyTransform2.translation[0], pointRIGHT2[1] - MonkeyTransform2.translation[1], pointRIGHT2[2] - MonkeyTransform2.translation[2]];
+
+            let angleToUP2 = AngleBetweenVectors(vectToPlayer9, vectUP2);
+            let angleToDOWN2 = AngleBetweenVectors(vectToPlayer9, vectDOWN2);
+            let angleToLEFT2 = AngleBetweenVectors(vectToPlayer9, vectLEFT2);
+            let angleToRIGHT2 = AngleBetweenVectors(vectToPlayer9, vectRIGHT2);
+
+            if(Corners[targetCornerIndex2][0] == null) angleToUP2 = 999;
+            if(Corners[targetCornerIndex2][1] == null) angleToDOWN2 = 999;
+            if(Corners[targetCornerIndex2][2] == null) angleToLEFT2 = 999;
+            if(Corners[targetCornerIndex2][3] == null) angleToRIGHT2 = 999;
+
+            let minAngle2 = Math.min(Math.abs(angleToUP2), Math.abs(angleToDOWN2), Math.abs(angleToLEFT2), Math.abs(angleToRIGHT2));
+
+            if(minAngle2 === Math.abs(angleToUP2)){
+                targetCornerIndex2 = Corners[targetCornerIndex2][0];
+                targetCorner2 = cornerCordinates[targetCornerIndex2];
+                if(direction2 === "down"){
+                    direction2 = "up";
+                    monkeyYaw2 = Math.PI;
+                }else if(direction2 === "left"){
+                    direction2 = "up";
+                    monkeyYaw2 = -Math.PI;
+                }else if(direction2 === "right"){
+                    direction2 = "up";
+                    monkeyYaw2 = Math.PI;
+                }
+
+            }else if(minAngle2 === Math.abs(angleToDOWN2)){
+                targetCornerIndex2 = Corners[targetCornerIndex2][1];
+                targetCorner2 = cornerCordinates[targetCornerIndex2];
+                if(direction2 === "up"){
+                    direction2 = "down";
+                    monkeyYaw2 = Math.PI;
+                }else if(direction2 === "left"){
+                    direction2 = "down";
+                    monkeyYaw2 = Math.PI;
+                }else if(direction2 === "right"){
+                    direction2 = "down";
+                    monkeyYaw2 = -Math.PI;
+                }
+
+            }else if(minAngle2 === Math.abs(angleToLEFT2)){
+                targetCornerIndex2 = Corners[targetCornerIndex2][2];
+                targetCorner2 = cornerCordinates[targetCornerIndex2];
+                if(direction2 === "down"){
+                    direction2 = "left";
+                    monkeyYaw2 = -Math.PI/2;
+                }else if(direction2 === "up"){
+                    direction2 = "left";
+                    monkeyYaw2 = Math.PI/2;
+                }else if(direction2 === "right"){
+                    direction2 = "left";
+                    monkeyYaw2 = Math.PI/2;
+                }
+
+            }else if(minAngle2 === Math.abs(angleToRIGHT2)){
+                targetCornerIndex2 = Corners[targetCornerIndex2][3];
+                targetCorner2 = cornerCordinates[targetCornerIndex2];
+                if(direction2 === "down"){
+                    direction2 = "right";
+                    monkeyYaw2 = Math.PI/2;
+                }else if(direction2 === "up"){
+                    direction2 = "right";
+                    monkeyYaw2 = -Math.PI/2;
+                }else if(direction2 === "left"){
+                    direction2 = "right";
+                    monkeyYaw2 = Math.PI/2;
+                }
+            }
+        }
+
+        const vectToCorner2 = [targetCorner2[0] - MonkeyTransform2.translation[0], targetCorner2[1] - MonkeyTransform2.translation[1], targetCorner2[2] - MonkeyTransform2.translation[2]];
+        distToCorner2 = VectLenght(vectToCorner2);
+
+        let angleToCorner2 = AngleBetweenVectors(vectToCorner2, vectUP2);
+        //console.log("pos: x:" + MonkeyTransform2.translation[0] + " z:" + MonkeyTransform2.translation[1] + " y:" + MonkeyTransform2.translation[2]);
+        //console.log("dist to corner: " + distToCorner2 + " corner index: " + 2);
+
+        let MonkeyXtravel2 = Math.sin(angleToCorner2)*(MonkeySpeed2);
+        let MonkeyYtravel2 = Math.cos(angleToCorner2)*(MonkeySpeed2); 
+        
+
+        MonkeyTransform2.translation[0] += MonkeyXtravel2;
+        MonkeyTransform2.translation[2] -= MonkeyYtravel2;
+        
+        // rdeča luč za opico
+        enemyLight2.pos[0] = MonkeyTransform2.translation[0];
+        enemyLight2.pos[1] = MonkeyTransform2.translation[1] + 1;
+        enemyLight2.pos[2] = MonkeyTransform2.translation[2];
+        
     }
 });
 
@@ -1103,6 +1226,7 @@ scene.addChild(wall4.returnNode());
 */
 
 scene.addChild(Monkey.returnNode());
+scene.addChild(Monkey2.returnNode());
 
 scene.addChild(shard.returnNode());
 
@@ -1119,7 +1243,7 @@ for (let j=0; j<wallsArray.length; j++) {
 
 scene.addChild(camera);
 
-// Update all components
+// Update 
 function update() {
     scene.traverse(node => {
         for (const component of node.components) {
@@ -1129,12 +1253,10 @@ function update() {
 }
 
 function render() {
-    // Get the required matrices
     const modelMatrix = getGlobalModelMatrix(ground);
     const viewMatrix = getGlobalViewMatrix(camera);
     const projectionMatrix = getProjectionMatrix(camera);
 
-    // Upload the transformation matrix
     const mvp = mat4.create()
         .multiply(projectionMatrix)
         .multiply(viewMatrix)
@@ -1150,7 +1272,7 @@ function render() {
     });
 
     device.queue.writeBuffer(uniformBuffer, 0, uniformData);
-    device.queue.writeBuffer(plankUniformBuffer, 0, uniformData);
+   
 
     /*
     wall1.updateRender();
@@ -1160,6 +1282,7 @@ function render() {
     */
 
     Monkey.updateRender();
+    Monkey2.updateRender();
 
     shard.updateRender();
     
@@ -1204,10 +1327,7 @@ function render() {
     renderPass.setBindGroup(0, ceilingBindGroup);
     renderPass.drawIndexed(indices.length);
 
-    renderPass.setVertexBuffer(0, plankBuffer);
-    renderPass.setIndexBuffer(plankIndexBuffer, 'uint32');
-    renderPass.setBindGroup(0, plankBindGroup);
-    renderPass.drawIndexed(plankIndexCount);
+    
 
 
     
@@ -1218,6 +1338,7 @@ function render() {
     wall4.draw(renderPass);
     */
     Monkey.draw(renderPass);
+    Monkey2.draw(renderPass);
 
     shard.draw(renderPass);
     
@@ -1288,23 +1409,17 @@ const wallColliders = [
         size: [60, 25, 1], 
         meta: { type: 'wall' } 
     },
-
-
     { 
-        // This is wall 39 from Positions.js: { pos: [0, 0, 4], size: [8, 25, 1], rotation: 0 }
+        // wall 39
         node: { translation: [0, 0, 4] }, 
         size: [8, 25, 1], 
-        meta: { type: 'door-wall' } // Add this label
+        meta: { type: 'door-wall' }
     },
-
-    // ADD THESE: The physical boxes for the doors
-    // Because we use door.node, the collision moves with your animation!
     { 
         node: door.node, 
         size: [1.5, 9, 0.4], 
         meta: { type: 'door-panel' } 
     },
-
     { 
         node: door2.node, 
         size: [1.5, 9, 0.4], 
