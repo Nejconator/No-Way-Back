@@ -64,8 +64,8 @@ export const walls = [
     { pos: [14, 0, 8.5], size: [1, 25, 9], rotation: 1 },     //46
     { pos: [9, 0, 13], size: [10, 25, 1], rotation: 0 },      //47
     { pos: [4, 0, 15.5], size: [1, 25, 5], rotation: 1 },     //48
-    { pos: [-3, 0, 5.56], size: [1, 25, 3,5], rotation: 1 },     //elevator room 1
-    { pos: [3, 0, 5.56], size: [1, 25, 3,5], rotation: 1 },     //elevator room 2
+    { pos: [-3, 0, 5.58], size: [1, 25, 3,5], rotation: 1 },     //elevator room 1
+    { pos: [3, 0, 5.58], size: [1, 25, 3,5], rotation: 1 },     //elevator room 2
     { pos: [0, 0, 7], size: [6, 25, 1], rotation: 0 },     //elevator room 3
     { pos: [3, 0, 4.01], size: [3, 25, 1], rotation: 0 },        //39
     { pos: [-3, 0, 4.01], size: [3, 25, 1], rotation: 0 },        //39

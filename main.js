@@ -10,6 +10,7 @@ import { corners } from './corner.js';
 import { Shard } from './shard.js';
 import { UNIFORM_BYTES, buildUniformData, lightingState, enemyLight } from "./Lighting.js";
 import { Door } from './doors.js';
+import { Minimap } from './Minimap.js';
 import {
     getGlobalModelMatrix,
     getGlobalViewMatrix,
@@ -35,6 +36,65 @@ await Wall.loadTexture(device);
 await monkey.loadTexture(device);
 await Shard.loadTexture(device);
 await Door.loadTexture(device);
+
+// shard pickup sound
+const shardPickupSfx = new Audio("./sounds/shardSound.wav");
+shardPickupSfx.volume = 0.2;
+shardPickupSfx.preload = "auto";
+
+/*
+function unlockSfx() {
+  shardPickupSfx.play().then(() => {
+    shardPickupSfx.pause();
+    shardPickupSfx.currentTime = 0;
+  }).catch(() => {});
+  window.removeEventListener("pointerdown", unlockSfx);
+  window.removeEventListener("keydown", unlockSfx);
+}
+window.addEventListener("pointerdown", unlockSfx, { once: true });
+window.addEventListener("keydown", unlockSfx, { once: true });
+*/
+
+function playShardPickupSfx() {
+  shardPickupSfx.currentTime = 0;   // da dela tudi pri hitrem pobiranju več shardov
+  shardPickupSfx.play().catch(() => {});
+}
+
+// player death sound
+let gameOver = false;
+const dyingSfx = new Audio("./sounds/dyingSound.wav");
+dyingSfx.volume = 0.2;
+dyingSfx.preload = "auto";
+
+function playDyingSfx() {
+  dyingSfx.currentTime = 0;
+  dyingSfx.play().catch(() => {});
+}
+
+const bgVolume = 0.15;
+//  background music
+let bgMusic = new Audio("./sounds/backgroundSound.mp3");
+bgMusic.loop = true;
+bgMusic.volume = 0;
+bgMusic.preload = "auto";
+
+let audioUnlocked = false;
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+
+  bgMusic.play().then(() => {
+  }).catch(() => {});
+
+  dyingSfx.play().then(() => {
+    dyingSfx.pause();
+    dyingSfx.currentTime = 0;
+  }).catch(() => {});
+}
+
+window.addEventListener("pointerdown", unlockAudio, { once: true });
+window.addEventListener("keydown", unlockAudio, { once: true });
 
 
 
@@ -199,16 +259,33 @@ const vertex = new Float32Array([
 
 
 
-// === CEILING (strop) ===
-const CEILING_Y = 10.0; // wall.js ima zidove do y=10, zato strop na 10 (lahko 10.2 če želiš)
 
-// Uporabi isti repeat kot floor (da se tekstura tile-a)
+const CEILING_Y = 10.0; // wall.js ima zidove do y=10, zato strop na 10 
+
+
 const ceilingVertex = new Float32Array([
-  // positions              // texcoords
   -30, CEILING_Y, -30,  1,   0, 0,
    30, CEILING_Y, -30,  1,   repeatU, 0,
   -30, CEILING_Y,  30,  1,   0, repeatV,
    30, CEILING_Y,  30,  1,   repeatU, repeatV,
+]);
+
+const plank = new Float32Array([
+    -3, 10-5, 0,  0,0,    //0  levo zgoraj
+    3, 10-5, 0,   1,0,    //1  desno zgoraj
+    3, 9-5, 0,    0,1,    //2  desno spodaj
+    -3, 9-5, 0,   1,1,    //3  levo spodaj
+/*
+    -3, 10, 3.5,  0,1,  //4 levo zgoraj
+    3, 10, 3.5,   1,1,  //5 desno zgoraj
+    3, 9, 3.5,    0,1,  //6 desno spodaj
+    -3, 9, 3.5,   1,1,  //7 levo spodaj */
+]);
+// 
+//
+const plankIndices = new Uint32Array([
+    0,1,2,
+    0,3,2,
 ]);
 
 const ceilingVertexBuffer = device.createBuffer({
@@ -218,7 +295,13 @@ const ceilingVertexBuffer = device.createBuffer({
 
 device.queue.writeBuffer(ceilingVertexBuffer, 0, ceilingVertex);
 
+const plankBuffer = device.createBuffer({
+    size: plank.byteLength,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+});
 
+
+device.queue.writeBuffer(plankBuffer, 0, plank);
 
 
 const imageBitmap = await fetch('Red-carpet.jpg')
@@ -254,8 +337,8 @@ const vertexBuffer = device.createBuffer({
 device.queue.writeBuffer(vertexBuffer, 0, vertex);
 
 
-// naloži ceiling bitmap (lahko je pred pipeline)
-const ceilingBitmap = await fetch('ceiling.jpg') // ali ciling.jpg
+
+const ceilingBitmap = await fetch('ceiling.jpg') 
   .then(r => r.blob())
   .then(b => createImageBitmap(b));
 
@@ -279,13 +362,22 @@ const indices = new Uint32Array([
     2, 1, 3,    // Drugi trikotnik
 ]);
 
+
+
+const plankIndexBuffer = device.createBuffer({
+    size: plankIndices.byteLength,
+    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+});
+
 const indexBuffer = device.createBuffer({
     size: indices.byteLength,
     usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
 });
 
 device.queue.writeBuffer(indexBuffer, 0, indices);
+device.queue.writeBuffer(plankIndexBuffer, 0, plankIndices);
 
+const plankIndexCount = plankIndices.length;
 
 // Create the depth texture
 const depthTexture = device.createTexture({
@@ -344,6 +436,11 @@ const uniformBuffer = device.createBuffer({
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
+const plankUniformBuffer = device.createBuffer({
+    size: UNIFORM_BYTES,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+});
+
 // ceiling bind group (ZDAJ je pipeline že definiran)
 const ceilingBindGroup = device.createBindGroup({
   layout: pipeline.getBindGroupLayout(0),
@@ -359,6 +456,15 @@ const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
     entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 1, resource: texture.createView() },
+        { binding: 2, resource: sampler },
+    ]
+});
+
+const plankBindGroup = device.createBindGroup({
+    layout: pipeline.getBindGroupLayout(0),
+    entries: [
+        { binding: 0, resource: { buffer: plankUniformBuffer } },
         { binding: 1, resource: texture.createView() },
         { binding: 2, resource: sampler },
     ]
@@ -488,7 +594,7 @@ const lampPipeline = device.createRenderPipeline({
   },
 });
 
-// Uniform: mat4 (64) + vec4 (16) = 80 bajtov
+
 const lampUniformBuffers = lamps.map(() =>
   device.createBuffer({
     size: 80,
@@ -505,11 +611,11 @@ const lampBindGroups = lampUniformBuffers.map(buf =>
 
 
 
-// Create the scene
+// scene
 
 
 const ground = new Node();
-ground.addComponent(new Transform());  // Ground is at origin
+ground.addComponent(new Transform());  
 
 const camera = new Node();
 camera.addComponent(new Camera({
@@ -542,6 +648,14 @@ for (let k = 0; k < shards.length; k++) {
     shrdArray[k] = new Shard(device, pipeline, camera, shards[k][0]);
 }
 
+const minimap = new Minimap({
+    playerNode: camera, 
+    worldSize: floorSize,
+    walls: walls,
+    monkeys: [Monkey],
+    shards: [shard, ...shrdArray] 
+});
+
 
 const wallsArray = []; 
 let i = 0;
@@ -556,7 +670,7 @@ for (const w of walls) {
 }
 
 
-// računaš točo eno mersko enoto pred tabo v smeri kamere
+// toča eno mersko enoto pred tabo v smeri kamere
 function getForwardVector(camera) {
     const world = getGlobalModelMatrix(camera);
     
@@ -629,24 +743,18 @@ camera.addComponent({
         quat.rotateY(rotation, rotation, -MouseX*sensitivity);
         //quat.rotateX(rotation, rotation, -MouseY*sensitivity);
 
-        // X+ (desno), X- (levo), Z+ (nazaj), Z- (naprej), Y+ (gor), Y- (dol)
         const vecCamera = camera.getComponentOfType(Transform).translation;
         const Refvector = [vecCamera[0], vecCamera[1], vecCamera[2]-5];
         
         
-        const vectorCameraToRef = [Refvector[0] - transform.translation[0],
-                                   Refvector[1] - transform.translation[1],
-                                   Refvector[2] - transform.translation[2]];
+        const vectorCameraToRef = [Refvector[0] - transform.translation[0], Refvector[1] - transform.translation[1], Refvector[2] - transform.translation[2]];
         
         const CameraFrVector = getForwardVector(camera);
 
-        const vectorCameraToForward = [CameraFrVector[0] - transform.translation[0],
-                                       CameraFrVector[1] - transform.translation[1],
-                                       CameraFrVector[2] - transform.translation[2]];
+        const vectorCameraToForward = [CameraFrVector[0] - transform.translation[0], CameraFrVector[1] - transform.translation[1], CameraFrVector[2] - transform.translation[2]];
 
-        
 
-        // računa kot za koliko je kamera rotirana glede na začetno smer
+        //koliko je kamera rotirana glede na začetno smer
         let angleBetween = AngleBetweenVectors(vectorCameraToRef, vectorCameraToForward);
         //console.log("Angle: " + angleBetween*(180/Math.PI));
         
@@ -680,9 +788,7 @@ camera.addComponent({
         let velocityFactor = 0.025
         
 
-        // tranlation[0] -> x axis
-        // tranlation[1] -> y axis
-        // tranlation[2] -> z axis
+  
         if (keysPressed['w'] || keysPressed['W']) {
            velocityW = 1;
            velocityS = 0;
@@ -771,10 +877,18 @@ Monkey.returnNode().addComponent({
         const CameraPos = camera.getComponentOfType(Transform).translation;
         const vectToPlayer = [CameraPos[0] - MonkeyTransform.translation[0], CameraPos[1] - MonkeyTransform.translation[1], CameraPos[2] - MonkeyTransform.translation[2]];
         const distToPlyr = VectLenght(vectToPlayer);
+        const mindist = 15;
+        if(distToPlyr <= mindist){
+            bgMusic.volume = bgVolume/mindist * (mindist-distToPlyr);
+        }
 
         const pointUP = [MonkeyTransform.translation[0], MonkeyTransform.translation[1], MonkeyTransform.translation[2]-5];
         const vectUP = [pointUP[0] - MonkeyTransform.translation[0], pointUP[1] - MonkeyTransform.translation[1], pointUP[2] - MonkeyTransform.translation[2]];
-        if (distToPlyr<2){
+        if (distToPlyr<2 && !gameOver){
+            gameOver = true;
+            bgMusic.pause();
+            bgMusic.currentTime = 0;
+            playDyingSfx();
             window.showLoseScreen();
         }
         if(distToCorner<=0.05){
@@ -876,6 +990,7 @@ Monkey.returnNode().addComponent({
         enemyLight.pos[2] = MonkeyTransform.translation[2];
     }
 });
+
 let Srot = 0;
 for (let k = 0; k < shrdArray.length; k++) {
     shrdArray[k].returnNode().addComponent({
@@ -893,6 +1008,8 @@ for (let k = 0; k < shrdArray.length; k++) {
 
             if(distToPlyr2 < 2){
                 shards[k][1] = false;
+                playShardPickupSfx();
+                shrdArray[k].visible = false;
                 shardsCollected++;
                 if (hud) hud.textContent = `Shards: ${shardsCollected}/${shardNum}`;
                 if (shardsCollected === shardNum) {
@@ -912,6 +1029,8 @@ shard.returnNode().addComponent({
         const distToPlyr4 = VectLenght(vectToPlayer4);
 
         if(distToPlyr4 < 2){
+            bgMusic.pause();
+            bgMusic.currentTime = 0;
             window.showWinScreen();
         }
     }
@@ -1031,6 +1150,7 @@ function render() {
     });
 
     device.queue.writeBuffer(uniformBuffer, 0, uniformData);
+    device.queue.writeBuffer(plankUniformBuffer, 0, uniformData);
 
     /*
     wall1.updateRender();
@@ -1073,15 +1193,21 @@ function render() {
             depthStoreOp: 'discard',
         },
     });
+
     renderPass.setPipeline(pipeline);
     renderPass.setVertexBuffer(0, vertexBuffer);
     renderPass.setIndexBuffer(indexBuffer, 'uint32');
     renderPass.setBindGroup(0, bindGroup);
     renderPass.drawIndexed(indices.length);
-    // === DRAW CEILING ===
+
     renderPass.setVertexBuffer(0, ceilingVertexBuffer);
     renderPass.setBindGroup(0, ceilingBindGroup);
     renderPass.drawIndexed(indices.length);
+
+    renderPass.setVertexBuffer(0, plankBuffer);
+    renderPass.setIndexBuffer(plankIndexBuffer, 'uint32');
+    renderPass.setBindGroup(0, plankBindGroup);
+    renderPass.drawIndexed(plankIndexCount);
 
 
     
@@ -1141,27 +1267,23 @@ function render() {
 }
 
 const wallColliders = [
-    { 
-        // wall1 (rotation 1 in main.js) = Side wall on the right
+    {  
         node: { translation: [30, 7.5, 0] }, 
         size: [1, 25, 60], 
         meta: { type: 'wall' } 
     },
     { 
-        // wall2 (rotation 1 in main.js) = Side wall on the left
-        // position [-60, 0, 0] + vertex offset [30, 0, 0] = -30
         node: { translation: [-30, 7.5, 0] }, 
         size: [1, 25, 60], 
         meta: { type: 'wall' } 
     },
     { 
-        // wall3 (rotation 0 in main.js) = Back wall
         node: { translation: [0, 7.5, -30] }, 
         size: [60, 25, 1], 
         meta: { type: 'wall' } 
     },
     { 
-        // wall4 (rotation 0 in main.js) = Back wall
+        // wall4 
         node: { translation: [0, 7.5, 30] }, 
         size: [60, 25, 1], 
         meta: { type: 'wall' } 
@@ -1210,6 +1332,7 @@ function frame() {
     update();
     collisions.update();
     render();
+    minimap.update();
     requestAnimationFrame(frame);
 }
 
