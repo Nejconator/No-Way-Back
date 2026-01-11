@@ -25,7 +25,7 @@ export class Door {
     }
 
 
-    constructor(device, pipeline, camera, position) { // rotation 0 = along x axis, 1 = along y axis
+    constructor(device, pipeline, camera, position) { 
 
         this.device = device;
         this.pipeline = pipeline;
@@ -65,16 +65,15 @@ export class Door {
 
         
         const door = new Float32Array([
-            // positions         // color  
             -0.75, 0, 0, 1,      0, 0,       
             0.75, 0, 0, 1,       0, 1,      
-            0.75, 9, 0, 1,        1, 1,      
-            -0.75, 9, 0, 1,         0, 1,       
+            0.75, 10, 0, 1,        1, 1,      
+            -0.75, 10, 0, 1,         0, 1,       
 
             -0.75, 0, -0.2, 1,      1, 0,      
             0.75, 0, -0.2, 1,       0, 0,       
-            0.75, 9, -0.2, 1,        0, 1,        
-            -0.75, 9, -0.2, 1,         1, 1,      
+            0.75, 10, -0.2, 1,        0, 1,        
+            -0.75, 10, -0.2, 1,         1, 1,      
 
             
         ]);
@@ -149,10 +148,10 @@ export class Door {
             .multiply(view)
             .multiply(model);
 
-        // We need the camera position for the lighting calculations in the shader
+       
         const cameraPos = this.camera.getComponentOfType(Transform).translation;
 
-        // Build the full uniform structure required by shader.wgsl
+  
         const uniformData = buildUniformData({
           mvp,
           model,
@@ -160,7 +159,7 @@ export class Door {
           lightingState,
         });
 
-        // Write the full data packet to the buffer
+   
         this.device.queue.writeBuffer(this.doorUniformBuffer, 0, uniformData);
     }
 
