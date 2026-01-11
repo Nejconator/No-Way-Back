@@ -19,19 +19,10 @@ struct Uniforms {
   mvp : mat4x4f,
   model : mat4x4f,
 
-  // cameraPos.xyz, cameraPos.w = pointLightCount
   cameraPos_pointCount : vec4f,
-
-  // dirDir.xyz (direction "from light"), dirDir.w = dirIntensity
   dirDir_intensity : vec4f,
-
-  // dirColor.xyz, dirColor.w = ambientStrength
   dirColor_ambient : vec4f,
-
-  // pointPos.xyz, pointPos.w = intensity
   pointPosIntensity : array<vec4f, MAX_POINT_LIGHTS>,
-
-  // pointColor.xyz, pointColor.w = range
   pointColorRange : array<vec4f, MAX_POINT_LIGHTS>,
 };
 
@@ -54,30 +45,24 @@ fn vertex(input: VertexInput) -> VertexOutput {
 @fragment
 fn fragment(input: VertexOutput) -> FragmentOutput {
   var out : FragmentOutput;
-
-  // Albedo from texture
   let albedo = textureSample(baseTexture, baseSampler, input.texcoords).rgb;
 
-  // Flat normal from screen-space derivatives of world position
   var N = normalize(cross(dpdx(input.worldPos), dpdy(input.worldPos)));
 
-  // View direction
   let camPos = U.cameraPos_pointCount.xyz;
-  let V = normalize(camPos - input.worldPos);
 
-  // Make normal face camera (prevents “dark backfaces” when winding varies)
+  let V = normalize(camPos - input.worldPos);
   N = faceForward(N, -V, N);
 
-  // Ambient
   let ambient = U.dirColor_ambient.w;
   var lightSum = vec3f(ambient);
 
-  // Directional light (Lambert)
   let Ld = normalize(-U.dirDir_intensity.xyz);
   let NdL = max(dot(N, Ld), 0.0);
   lightSum += NdL * U.dirColor_ambient.xyz * U.dirDir_intensity.w;
 
-  // Point lights
+
+
   let count = u32(U.cameraPos_pointCount.w);
   for (var i: u32 = 0u; i < MAX_POINT_LIGHTS; i = i + 1u) {
     if (i >= count) { break; }
@@ -88,8 +73,6 @@ fn fragment(input: VertexOutput) -> FragmentOutput {
     let Lvec = posI.xyz - input.worldPos;
     let dist = length(Lvec);
     let L = Lvec / max(dist, 0.0001);
-
-    // attenuation using range
     let range = max(colR.w, 0.001);
     let att = clamp(1.0 - (dist / range), 0.0, 1.0);
     let diff = max(dot(N, L), 0.0);

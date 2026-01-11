@@ -29,7 +29,7 @@ export class monkey {
         this.device = device;
     }
 
-    constructor(device, pipeline, camera, position) { // rotation 0 = along x axis, 1 = along y axis
+    constructor(device, pipeline, camera, position) { // rotation 0 = x, 1 = y 
 
         this.device = device;
         this.pipeline = pipeline;
@@ -85,7 +85,6 @@ export class monkey {
 
 
         const body = new Float32Array([
-            // positions         // texcoords
             -0.75, 0, -0.5, 1,          1, 1,
             0.75, 0, -0.5, 1,          0, 1,
             -0.75, 0, 0.5, 1,          1, 1,
@@ -98,7 +97,6 @@ export class monkey {
         ]);
 
         const head = new Float32Array([
-            // positions         // texcoords
             -0.5, -2.5, -0.3, 1,      1, 1,
             0.5, -2.5, -0.3, 1,      0, 1,
             -0.5, -2.5, 0.3, 1,      1, 1,
@@ -111,7 +109,6 @@ export class monkey {
         ]);
 
         const arm1 = new Float32Array([
-            // positions         // texcoords
            0.35, -0.25,-0.25, 1,      0, 0,
            0.5, -0.25, -0.25, 1,      1, 0,
            0.5, -0.25, 0.25, 1,      0, 0,
@@ -125,7 +122,6 @@ export class monkey {
         ]);
 
         const arm2 = new Float32Array([
-            // positions         // texcoords
            -0.35, -0.25,-0.25, 1,      0, 0,    //0
            -0.5, -0.25, -0.25, 1,      1, 0,    //1
            -0.5, -0.25, 0.25, 1,      0, 0,     //2
@@ -139,7 +135,6 @@ export class monkey {
         ]);
         /*
         const leg1 = new Float32Array([
-            // positions         // texcoords
             -0.4, -2.5, -0.15, 1,      0, 0,
             -0.1, -2.5, -0.15, 1,      1, 0,
             -0.1, -2.5, 0.15, 1,      1, 1,
@@ -152,7 +147,6 @@ export class monkey {
         ]);
 
         const leg2 = new Float32Array([
-            // positions         // texcoords
             0.4, -2.5, -0.15, 1,      0, 0,
             0.1, -2.5, -0.15, 1,      1, 0,
             0.1, -2.5, 0.15, 1,      1, 1,

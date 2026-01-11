@@ -3,18 +3,18 @@ import { Transform } from './Transform.js';
 export class Collisions {
     constructor({ playerNode, playerSize = [1, 1.8, 1], wallColliders = [] }) {
         this.playerNode = playerNode;
-        this.playerSize = this._toVec(playerSize);
+        this.playerSize = this.toVec(playerSize);
         this.wallColliders = wallColliders.slice();
        
     }
 
-    _toVec(s) {
+    toVec(s) {
         if (Array.isArray(s)) return s;
         if (typeof s === 'object') return [s.x || 1, s.y || 1, s.z || 1];
         return [1, 1, 1];
     }
 
-    _getPositionOf(node) {
+    getPositionOf(node) {
         if (!node) return [0,0,0];
         try {
             const t = node.getComponentOfType?.(Transform);
@@ -28,8 +28,8 @@ export class Collisions {
     }
 
 
-    _getAABB(node, size) {
-        const pos = this._getPositionOf(node);
+    getAABB(node, size) {
+        const pos = this.getPositionOf(node);
         const half = [size[0] / 2, size[1] / 2, size[2] / 2];
         return {
             min: [pos[0] - half[0], pos[1] - half[1], pos[2] - half[2]],
@@ -39,7 +39,7 @@ export class Collisions {
     }
 
 
-    _aabbIntersect(a, b) {
+    aabbIntersect(a, b) {
         return !(
             a.max[0] < b.min[0] || a.min[0] > b.max[0] ||
             a.max[1] < b.min[1] || a.min[1] > b.max[1] ||
@@ -48,8 +48,8 @@ export class Collisions {
     }
 
 
-    _getPenetration(a, b) {
-        if (!this._aabbIntersect(a, b)) return null;
+    getPenetration(a, b) {
+        if (!this.aabbIntersect(a, b)) return null;
         const penX = Math.min(a.max[0] - b.min[0], b.max[0] - a.min[0]);
         const penY = Math.min(a.max[1] - b.min[1], b.max[1] - a.min[1]);
         const penZ = Math.min(a.max[2] - b.min[2], b.max[2] - a.min[2]);
@@ -60,13 +60,13 @@ export class Collisions {
     update() {
         if (!this.playerNode) return;
 
-        const playerAABB = this._getAABB(this.playerNode, this.playerSize);
+        const playerAABB = this.getAABB(this.playerNode, this.playerSize);
 
         for (const wc of this.wallColliders) {
             const node = wc.node ?? wc;
-            const size = this._toVec(wc.size ?? [1,1,1]);
-            const aabb = this._getAABB(node, size);
-            const pen = this._getPenetration(playerAABB, aabb);
+            const size = this.toVec(wc.size ?? [1,1,1]);
+            const aabb = this.getAABB(node, size);
+            const pen = this.getPenetration(playerAABB, aabb);
             if (pen) {
                 let [px, py, pz] = pen;
                 const axes = [
@@ -76,7 +76,7 @@ export class Collisions {
                 ];
                 axes.sort((a,b) => a.pen - b.pen);
                 const smallest = axes[0];
-                const playerPos = this._getPositionOf(this.playerNode);
+                const playerPos = this.getPositionOf(this.playerNode);
                 const otherCenter = aabb.center;
 
                 let sign = (playerPos[ smallest.axis === 'x' ? 0 : smallest.axis === 'y' ? 1 : 2 ] <
@@ -96,12 +96,11 @@ export class Collisions {
                     else playerPos[2] += push;
                 }
 
-                Object.assign(playerAABB, this._getAABB(this.playerNode, this.playerSize));
+                Object.assign(playerAABB, this.getAABB(this.playerNode, this.playerSize));
             }
         }
 
     }
-
     addWall(node, size = [1,1,1], meta = {}) {
         this.wallColliders.push({ node, size, meta });
     }

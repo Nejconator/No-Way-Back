@@ -29,7 +29,7 @@ export class Wall {
         this.device = device;
     }
 
-    constructor(device, pipeline, camera, position, rotation, length) { // rotation 0 = along x axis, 1 = along y axis
+    constructor(device, pipeline, camera, position, rotation, length) { // rotation 0 = x , 1 = y 
 
         this.device = device;
         this.pipeline = pipeline;
@@ -86,95 +86,89 @@ export class Wall {
 
         
         const wall1 = new Float32Array([
-            // positions         // texcoords
-            -this.length, 0.5, 0, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            this.length, 0.5, 0, 1,       repeatU, 0,    // 1 - spodaj desno
-            -this.length, 10, 0, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
-            this.length, 10, 0, 1,       repeatU, repeatV,   // 3 - zgoraj desno
+            -this.length, 0.5, 0, 1,       0, 0,    // 0 spodaj levo 
+            this.length, 0.5, 0, 1,       repeatU, 0,    // 1 spodaj desno
+            -this.length, 10, 0, 1,       0, repeatV,   // 2 zgoraj levo
+            this.length, 10, 0, 1,       repeatU, repeatV,   // 3 zgoraj desno
         ]);
 
         const wall2 = new Float32Array([
-            // positions         // texcoords
-            0, 0.5, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            0, 0.5, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
-            0, 10, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
-            0, 10, -this.length, 1,       repeatU, repeatV,   // 3 - zgoraj desno
+            0, 0.5, this.length, 1,       0, 0,    
+            0, 0.5, -this.length, 1,       repeatU, 0,    
+            0, 10, this.length, 1,       0, repeatV,   
+            0, 10, -this.length, 1,       repeatU, repeatV,   
         ]);
 
         const wall = this.rotation === 1 ? wall2 : wall1;
 
         const plank1 = new Float32Array([
-            // positions         // texcoords
-            -this.length, 0, -0.05, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            this.length, 0, -0.05, 1,       repeatU, 0,    // 1 - spodaj desno
-            -this.length, 0, +0.05, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            this.length, 0, +0.05, 1,       repeatU, 0,    // 1 - spodaj desno
-            -this.length, 0.5, -0.05, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
-            this.length, 0.5, -0.05, 1,       repeatU, repeatV,   // 3 - zgoraj desno
-            -this.length, 0.5, +0.05, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            -this.length, 0, -0.05, 1,       0, 0,   
+            this.length, 0, -0.05, 1,       repeatU, 0,    
+            -this.length, 0, +0.05, 1,       0, 0,    
+            this.length, 0, +0.05, 1,       repeatU, 0,    
+            -this.length, 0.5, -0.05, 1,       0, repeatV,   
+            this.length, 0.5, -0.05, 1,       repeatU, repeatV,   
+            -this.length, 0.5, +0.05, 1,       0, repeatV,     
             this.length, 0.5, +0.05, 1,       repeatU, repeatV,
         ]);
 
         const plank2 = new Float32Array([
-            // positions         // texcoords
-            -0.05, 0, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            -0.05, 0, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
-            +0.05, 0, this.length, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            +0.05, 0, -this.length, 1,       repeatU, 0,    // 1 - spodaj desno
-            -0.05, 0.5, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            -0.05, 0, this.length, 1,       0, 0,    
+            -0.05, 0, -this.length, 1,       repeatU, 0,    
+            +0.05, 0, this.length, 1,       0, 0,    
+            +0.05, 0, -this.length, 1,       repeatU, 0,    
+            -0.05, 0.5, this.length, 1,       0, repeatV,   
             -0.05, 0.5, -this.length, 1,       repeatU, repeatV,
-            +0.05, 0.5, this.length, 1,       0, repeatV,   // 2 - zgoraj levo (svetlejša rdeča)
+            +0.05, 0.5, this.length, 1,       0, repeatV,   
             +0.05, 0.5, -this.length, 1,       repeatU, repeatV,
         ]);
 
         const plank = this.rotation === 1 ? plank2 : plank1;
 
         const edgeplank1 = new Float32Array([
-            this.length-0.5, 0, -0.05, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            this.length+0.04, 0, -0.05, 1,       1, 0,    // 1 - spodaj desno
-            this.length-0.5, 0, +0.05, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            this.length+0.04, 0, +0.05, 1,       1, 0,    // 1 - spodaj desno
-            this.length-0.5, 10, -0.05, 1,       0, 1,   // 2 - zgoraj levo (svetlejša rdeča)
-            this.length+0.04, 10, -0.05, 1,       1, 1,   // 3 - zgoraj desno
-            this.length-0.5, 10, +0.05, 1,       0, 1,   // 2 - zgoraj levo (svetlejša rdeča)
+            this.length-0.5, 0, -0.05, 1,       0, 0,    
+            this.length+0.04, 0, -0.05, 1,       1, 0,    
+            this.length-0.5, 0, +0.05, 1,       0, 0,    
+            this.length+0.04, 0, +0.05, 1,       1, 0,    
+            this.length-0.5, 10, -0.05, 1,       0, 1,   
+            this.length+0.04, 10, -0.05, 1,       1, 1,  
+            this.length-0.5, 10, +0.05, 1,       0, 1,   
             this.length+0.04, 10, +0.05, 1,       1, 1,
 
         ]);
 
         const edgeplank2 = new Float32Array([
-            // positions         // texcoords
-            -0.05, 0, this.length+0.04, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            -0.05, 0, this.length-0.5, 1,       1, 0,    // 1 - spodaj desno
-            +0.05, 0, this.length+0.04, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            +0.05, 0, this.length-0.5, 1,       1, 0,    // 1 - spodaj desno
-            -0.05, 10, this.length+0.04, 1,       0, 1,   // 2 - zgoraj levo (svetlejša rdeča)
+            -0.05, 0, this.length+0.04, 1,       0, 0,    
+            -0.05, 0, this.length-0.5, 1,       1, 0,    
+            +0.05, 0, this.length+0.04, 1,       0, 0,    
+            +0.05, 0, this.length-0.5, 1,       1, 0,    
+            -0.05, 10, this.length+0.04, 1,       0, 1,   
             -0.05, 10, this.length-0.5, 1,       1, 1,
-            +0.05, 10, this.length+0.04, 1,       0, 1,   // 2 - zgoraj levo (svetlejša rdeča)
+            +0.05, 10, this.length+0.04, 1,       0, 1,   
             +0.05, 10, this.length-0.5, 1,      1, 1,
         ]);
 
         const edgePlank = this.rotation === 1 ? edgeplank2 : edgeplank1;
 
         const secEdgeplank1 = new Float32Array([
-            -this.length+0.5, 0, -0.05, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            -this.length-0.04, 0, -0.05, 1,       1, 0,    // 1 - spodaj desno
-            -this.length+0.5, 0, +0.05, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            -this.length-0.04, 0, +0.05, 1,       1, 0,    // 1 - spodaj desno
-            -this.length+0.5, 10, -0.05, 1,       0, 1,   // 2 - zgoraj levo (svetlejša rdeča)
-            -this.length-0.04, 10, -0.05, 1,       1, 1,   // 3 - zgoraj desno
-            -this.length+0.5, 10, +0.05, 1,       0, 1,   // 2 - zgoraj levo (svetlejša rdeča)
+            -this.length+0.5, 0, -0.05, 1,       0, 0,    
+            -this.length-0.04, 0, -0.05, 1,       1, 0,    
+            -this.length+0.5, 0, +0.05, 1,       0, 0,   
+            -this.length-0.04, 0, +0.05, 1,       1, 0,    
+            -this.length+0.5, 10, -0.05, 1,       0, 1,   
+            -this.length-0.04, 10, -0.05, 1,       1, 1,   
+            -this.length+0.5, 10, +0.05, 1,       0, 1,  
             -this.length-0.04, 10, +0.05, 1,       1, 1,
         ]);
 
         const secEdgeplank2 = new Float32Array([
-            // positions         // texcoords
-            -0.05, 0, -this.length-0.04, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            -0.05, 0, -this.length+0.5, 1,       1, 0,    // 1 - spodaj desno
-            +0.05, 0, -this.length-0.04, 1,       0, 0,    // 0 - spodaj levo (rdeča)
-            +0.05, 0, -this.length+0.5, 1,       1, 0,    // 1 - spodaj desno
-            -0.05, 10, -this.length-0.04, 1,       0, 1,   // 2 - zgoraj levo (svetlejša rdeča)
+            -0.05, 0, -this.length-0.04, 1,       0, 0,    
+            -0.05, 0, -this.length+0.5, 1,       1, 0,    
+            +0.05, 0, -this.length-0.04, 1,       0, 0,    
+            +0.05, 0, -this.length+0.5, 1,       1, 0,    
+            -0.05, 10, -this.length-0.04, 1,       0, 1,  
             -0.05, 10, -this.length+0.5, 1,       1, 1,
-            +0.05, 10, -this.length-0.04, 1,       0, 1,   // 2 - zgoraj levo (svetlejša rdeča)
+            +0.05, 10, -this.length-0.04, 1,       0, 1,   
             +0.05, 10, -this.length+0.5, 1,       1, 1,
         ]);
 
@@ -205,8 +199,8 @@ export class Wall {
         device.queue.writeBuffer(this.secEdgeplankBuffer, 0, secEdgePlank);
 
         const wallIndices = new Uint32Array([
-            0, 1, 2,    // Spodnji trikotnik
-            1, 3, 2,    // Zgornji trikotnik
+            0, 1, 2,    
+            1, 3, 2,   
         ]);
 
         const plankIndices = new Uint32Array([
